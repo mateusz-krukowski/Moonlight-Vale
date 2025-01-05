@@ -1,0 +1,7 @@
+﻿.idea/
+bin/
+obj/
+output/
+
+Content/bin/
+Content/obj/
