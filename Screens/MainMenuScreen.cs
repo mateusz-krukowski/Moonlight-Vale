@@ -22,10 +22,27 @@ public class MainMenuScreen : GameScreen
 
     public override void Initialize()
     {
-        var panel = new Panel();
         /*TODO add: soundTrack = game.Content.Load<Song>("path_to_file") */
         
         game.IsMouseVisible = true;
+        var panel = new Panel();
+        
+        var titleLabel = new Label
+        {
+            Text = "Moonlight Vale",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Top,
+            Font = font,
+            TextColor = Color.White,
+            VerticalSpacing = 2,
+            Margin = new Thickness(0, 100, 0, 0),
+            Background = new SolidBrush(Color.Transparent)
+        };
+        
+        panel.Widgets.Add(titleLabel);
+        
+        desktop.Root = panel;
+        
         
     }
 
@@ -42,6 +59,7 @@ public class MainMenuScreen : GameScreen
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         graphicsDevice.Clear(new Color(250, 128, 114));
+        desktop.Render(); // !!! important to make GUI visible
     }
 
     public override void Unload()

@@ -3,5 +3,7 @@ bin/
 obj/
 output/
 
+Folder.DotSettings.user
+
 Content/bin/
 Content/obj/

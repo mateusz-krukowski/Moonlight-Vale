@@ -44,7 +44,6 @@ namespace Moonlight_Vale
             _desktop = new Desktop();
             
             _screenManager = ScreenManager.Instance;
-            _screenManager.AddScreen(new MainMenuScreen(this, _screenManager, _spriteBatch, _desktop, _font));
             _screenManager.AddScreen(new SplashScreen(this, _screenManager, _spriteBatch, _desktop, _font));
         }
 

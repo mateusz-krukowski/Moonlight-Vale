@@ -13,7 +13,7 @@ public class SplashScreen : GameScreen
 {
     
     private double _elapsedTime; 
-    private readonly double _displayDuration = 2500;
+    private const double _displayDuration = 3000;
     
     public SplashScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, SpriteFontBase font) : base(game, screenManager,
         spriteBatch, desktop)
@@ -34,12 +34,13 @@ public class SplashScreen : GameScreen
 
         var titleLabel = new Label
         {
-            Text = "Welcome to\n Moonlight Vale Game",
+            Text = "Welcome to\nMoonlight Vale",
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Font = font,
             TextColor = Color.White,
-            Margin = new Thickness(0, 150, 0, 0),
+            VerticalSpacing = 2,
+            Margin = new Thickness(0, 0, 0, 0),
             Background = new SolidBrush(Color.Transparent)
         };
         
@@ -79,5 +80,7 @@ public class SplashScreen : GameScreen
     {
         // Wywołaj funkcję usuwającą ekran z maszyny stanów
         screenManager.RemoveScreen();
+        screenManager.AddScreen(new MainMenuScreen(game, screenManager, spriteBatch, desktop, font));
+
     }
 }
