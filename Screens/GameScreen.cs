@@ -12,7 +12,7 @@ public abstract class GameScreen
     protected ScreenManager screenManager;
     protected ContentManager content;
     protected GraphicsDevice graphicsDevice;
-    protected FontStashSharp.SpriteFontBase font;
+    protected FontStashSharp.FontSystem fontSystem;
     protected Desktop desktop;
     protected SpriteBatch spriteBatch;
     protected Song soundTrack;

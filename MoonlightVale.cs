@@ -18,14 +18,12 @@ namespace Moonlight_Vale
         private Desktop _desktop;
         private ScreenManager _screenManager;
         private FontSystem _fontSystem;
-        private FontStashSharp.SpriteFontBase _font;
         
 
         public MoonlightVale()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            
             
         }
 
@@ -44,7 +42,7 @@ namespace Moonlight_Vale
             _desktop = new Desktop();
             
             _screenManager = ScreenManager.Instance;
-            _screenManager.AddScreen(new SplashScreen(this, _screenManager, _spriteBatch, _desktop, _font));
+            _screenManager.AddScreen(new SplashScreen(this, _screenManager, _spriteBatch, _desktop, _fontSystem));
         }
 
         protected override void LoadContent()
@@ -52,9 +50,10 @@ namespace Moonlight_Vale
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _fontSystem = new FontSystem();
             
+            /*TODO make screens receive fontsystem instead of font as arugment -> font is only one size while fontystem is list of many*/
             
             _fontSystem.AddFont(System.IO.File.ReadAllBytes(  Content.RootDirectory + @"\Fonts\CelticBitRegular.ttf"));
-            _font = _fontSystem.GetFont(12);
+         //   _font = _fontSystem.GetFont(4);
 
 
         }
