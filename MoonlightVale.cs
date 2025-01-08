@@ -1,13 +1,10 @@
-﻿using System;
-using FontStashSharp;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using Moonlight_Vale.Screens;
 using Myra;
-using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
-using Squared.Tiled;
+using FontStashSharp;
+
+using Moonlight_Vale.Screens;
 
 namespace Moonlight_Vale
 {
@@ -67,8 +64,8 @@ namespace Moonlight_Vale
 
         protected override void Draw(GameTime gameTime)
         {
-            base.Draw(gameTime);
             _screenManager.Draw(gameTime, _spriteBatch);
+            base.Draw(gameTime);
             
         }
     }

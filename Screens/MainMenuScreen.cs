@@ -1,7 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Media;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
 using Myra.Graphics2D.Brushes;
@@ -14,6 +14,7 @@ public class MainMenuScreen : GameScreen
         base(game, screenManager, spriteBatch, desktop)
     {
         this.game = game;
+        this.screenManager = screenManager;
         this.spriteBatch = spriteBatch;
         this.desktop = desktop;
         this.fontSystem = fontSystem;
@@ -32,7 +33,7 @@ public class MainMenuScreen : GameScreen
             Text = "Moonlight Vale",
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Top,
-            Font = fontSystem.GetFont(5),
+            Font = fontSystem.GetFont(8),
             TextColor = Color.White,
             VerticalSpacing = 2,
             Margin = new Thickness(0, 100, 0, 0),
@@ -43,8 +44,9 @@ public class MainMenuScreen : GameScreen
         {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,
-            Left = 1280,
-            Spacing = 10 // Odstępy między przyciskami
+            Left = 1480,
+            Top = 280,
+            Spacing = 20 // Odstępy między przyciskami
         };
         
         stackPanel.Widgets.Add(CreateButton("New Game"));
@@ -55,6 +57,11 @@ public class MainMenuScreen : GameScreen
         
         panel.Widgets.Add(titleLabel);
         panel.Widgets.Add(stackPanel);
+        foreach (var widget in panel.Widgets)
+        {
+            Console.WriteLine(widget);
+        }
+       
  
         // Dodanie tabeli do Desktop
 
@@ -90,15 +97,16 @@ public class MainMenuScreen : GameScreen
     {
         var button = new TextButton
         {
-            Text= text,
-            
+            Text = text,
             Background = new SolidBrush(Color.FromNonPremultiplied(249, 246, 230, 255)),
             TextColor = Color.Black,
-            Font = fontSystem.GetFont(2),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(10),
-            ClipToBounds = false, // Aby zaokrąglenie działało poprawnie
-            Height = 50
+            Font = fontSystem.GetFont(3),
+
+            ContentHorizontalAlignment = HorizontalAlignment.Center,
+            ContentVerticalAlignment = VerticalAlignment.Center,
+            Width = 300,
+            Height = 50,
+            ClipToBounds = false // Aby zaokrąglenie działało poprawnie
         };
 
    
@@ -115,6 +123,16 @@ public class MainMenuScreen : GameScreen
             button.Background = new SolidBrush(new Color(249, 246, 230, 255));
             button.TextColor = Color.Black;
         };
+
+        button.Click += (s, e) =>
+        {
+            switch (button.Text)
+            {
+                case "New Game": screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop)); break;
+                case "Exit": game.Exit(); break;
+            }
+        };
+ 
 
         return button;
     }
