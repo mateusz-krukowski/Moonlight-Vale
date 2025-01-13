@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Media;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
 using Myra.Graphics2D.Brushes;
@@ -57,17 +58,8 @@ public class MainMenuScreen : GameScreen
         
         panel.Widgets.Add(titleLabel);
         panel.Widgets.Add(stackPanel);
-        foreach (var widget in panel.Widgets)
-        {
-            Console.WriteLine(widget);
-        }
-       
- 
-        // Dodanie tabeli do Desktop
 
         desktop.Root = panel;
-        
-        
     }
 
     public override void LoadContent(ContentManager content)
@@ -82,11 +74,10 @@ public class MainMenuScreen : GameScreen
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
-        graphicsDevice.Clear(new Color(250, 128, 114));
+        graphicsDevice.Clear(new Color(135, 206, 235));
         desktop.Render(); // !!! important to make GUI visible
         
     }
-    
 
     public override void Unload()
     {
@@ -98,34 +89,32 @@ public class MainMenuScreen : GameScreen
         var button = new TextButton
         {
             Text = text,
-            Background = new SolidBrush(Color.FromNonPremultiplied(249, 246, 230, 255)),
-            TextColor = Color.Black,
-            Font = fontSystem.GetFont(3),
-
-            ContentHorizontalAlignment = HorizontalAlignment.Center,
+            Font = fontSystem.GetFont(4),
             ContentVerticalAlignment = VerticalAlignment.Center,
+            
+            TextColor = Color.White,
+            OverTextColor = Color.Gray,
+            PressedTextColor = Color.LightGray,
+            
+            Background = new SolidBrush(Color.Transparent),
+            PressedBackground = new SolidBrush(Color.Transparent),
+            OverBackground = new SolidBrush(Color.Transparent),
+            FocusedBackground = new SolidBrush(Color.Transparent),
+            
+            BorderThickness = new Thickness(1),
+            Border = new SolidBrush(Color.Black),
+            
             Width = 300,
             Height = 50,
-            ClipToBounds = false // Aby zaokrąglenie działało poprawnie
+          
         };
 
-   
         
 
-        // Efekt najechania
-        button.MouseEntered += (s, e) =>
-        {
-            button.Background = new SolidBrush(Color.Black);
-            button.TextColor = Color.White;
-        };
-        button.MouseLeft += (s, e) =>
-        {
-            button.Background = new SolidBrush(new Color(249, 246, 230, 255));
-            button.TextColor = Color.Black;
-        };
 
         button.Click += (s, e) =>
         {
+            
             switch (button.Text)
             {
                 case "New Game": screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop)); break;

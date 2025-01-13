@@ -2,139 +2,74 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Myra.Graphics2D.UI;
+using Microsoft.Xna.Framework.Input;
 using Squared.Tiled;
 using System.Linq;
-using Microsoft.Xna.Framework.Input;
+using Myra.Graphics2D.UI;
 
 namespace Moonlight_Vale.Screens;
 
 public class OverworldScreen : GameScreen
 {
-    Map map;
-    Texture2D tileSet;
-    private float _zoomLevel = 4.0f; // Domyślna wartość powiększenia
-    private int _previousScrollValue; // Poprzedni stan scrolla
-    private const float MinZoom = 0.5f; // Minimalny zoom
-    private const float MaxZoom = 10.0f; // Maksymalny zoom
-    private const float zoomSpeed = 0.001f; // Szybkość zoomowania
+    private Map map;
+    private Texture2D tileSet;
+    private float zoom = 4.0f;
+    private int prevScroll;
+    private const float MinZoom = 0.5f, MaxZoom = 10.0f, ZoomSpeed = 0.001f;
+
+    public OverworldScreen(Game game, ScreenManager manager, SpriteBatch batch, Desktop desktop) 
+        : base(game, manager, batch, desktop) { }
+
+    public override void Initialize() { }
     
-    public OverworldScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop) : base(game, screenManager,  spriteBatch, desktop)
-    {
-        this.game = game;
-        this.screenManager = screenManager;
-        this.spriteBatch = spriteBatch;
-        this.desktop = desktop;
-        this.content = game.Content;
-    }
-
-    public override void Initialize()
-    {
-        
-    }
-
     public override void LoadContent(ContentManager content)
     {
-        map = Map.Load(content.RootDirectory +  @"\Tilemaps\player_farm_reduced.tmx", content);
-        tileSet = map.Tilesets.Values.ElementAt(0).Texture;
-        
+        map = Map.Load(content.RootDirectory + @"\Tilemaps\player_farm_reduced.tmx", content);
+        tileSet = map.Tilesets.Values.First().Texture;
     }
 
     public override void Update(GameTime gameTime)
     {
-        KeyboardState keyboardState = Keyboard.GetState();
-        MouseState mouseState = Mouse.GetState();
+        var keyboard = Keyboard.GetState();
+        var mouse = Mouse.GetState();
 
-        // Sprawdź, czy wciśnięto klawisz Ctrl
-        bool isCtrlPressed = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
-
-        if (isCtrlPressed)
+        if (keyboard.IsKeyDown(Keys.LeftControl))
         {
-            // Oblicz różnicę w ScrollWheelValue (delta)
-            int scrollDelta = mouseState.ScrollWheelValue - _previousScrollValue;
-
-            // Zmień zoomLevel w oparciu o różnicę, zastosuj zoomSpeed dla płynności
-            _zoomLevel += scrollDelta * zoomSpeed;
-
-            // Ogranicz wartość zoomLevel (min i max)
-            _zoomLevel = Math.Clamp(_zoomLevel, MinZoom, MaxZoom);
-
-            // Zapisz bieżący stan scrolla
-            _previousScrollValue = mouseState.ScrollWheelValue;
+            zoom = Math.Clamp(zoom + (mouse.ScrollWheelValue - prevScroll) * ZoomSpeed, MinZoom, MaxZoom);
+            prevScroll = mouse.ScrollWheelValue;
         }
     }
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         graphicsDevice.Clear(Color.Aqua);
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
         if (map == null) return;
-        
-        // Thread safety
-        lock (map)
+
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp); //removes antialiasing
+
+        foreach (var layer in map.Layers.Values)
         {
-            // Obliczenie wymiarów viewportu
-            int viewportWidth = (int)(graphicsDevice.Viewport.Width / _zoomLevel);
-            int viewportHeight = (int)(graphicsDevice.Viewport.Height / _zoomLevel);
-            int scaledTileWidth = (int)(map.TileWidth * _zoomLevel);
-            int scaledTileHeight = (int)(map.TileHeight * _zoomLevel);
-                
-            Rectangle viewport = new Rectangle(
-                0,
-                0,
-                viewportWidth,
-                viewportHeight
-            );
-
-            Vector2 viewportPosition = Vector2.Zero;
-            Vector2 viewportTileStart = viewportPosition / new Vector2(map.TileWidth, map.TileHeight);
-            Vector2 viewportTileEnd = viewportTileStart + new Vector2(viewportWidth, viewportHeight);
-            foreach (var layer in map.Layers.Values)
-            {
-                Rectangle tileRect = new Rectangle();
-                for (int y = (int)viewportTileStart.Y; y <= (int)viewportTileEnd.Y; y++)
-                {
-                    for (int x = (int)viewportTileStart.X; x <= (int)viewportTileEnd.X; x++)
-                    {
-                        if (x < 0 || x >= layer.Width || y < 0 || y >= layer.Height) continue;
-                        try
-                        {
-                            int tileIndex = layer.GetTile(x, y);
-                            if (tileIndex >= 0 && map.Tilesets.Any() && map.Tilesets.First().Value.MapTileToRect(tileIndex, ref tileRect))
-                            {
-                                Vector2 position = new Vector2(
-                                    x * scaledTileWidth,
-                                    y * scaledTileHeight
-                                );
-
-                                spriteBatch.Draw(
-                                    tileSet,
-                                    position,
-                                    tileRect,
-                                    Color.White,
-                                    rotation: 0f,
-                                    origin: Vector2.Zero,
-                                    scale: _zoomLevel,
-                                    effects: SpriteEffects.None,
-                                    layerDepth: 0f
-                                );
-                            }
-                        }
-                        catch
-                        {
-                            // Ignoruj wyjątki w metodzie GetTile
-                            continue;
-                        }
-                    }
-                }
-            }
+            DrawLayer(spriteBatch, layer);
         }
+
         spriteBatch.End();
     }
 
-    public override void Unload()
+    private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
     {
+        int scaledTileSize = (int)(map.TileWidth * zoom);
         
+        for (int y = 0; y < layer.Height; y++)
+        for (int x = 0; x < layer.Width; x++)
+        {
+            int tileIndex = layer.GetTile(x, y);
+
+            Rectangle tileRect = new();
+            if (!map.Tilesets.First().Value.MapTileToRect(tileIndex, ref tileRect)) continue;
+
+            spriteBatch.Draw(tileSet, new Vector2(x, y) * scaledTileSize, tileRect, Color.White, 0, Vector2.Zero, zoom, SpriteEffects.None, 0);
+        }
     }
+
+    public override void Unload() { }
 }

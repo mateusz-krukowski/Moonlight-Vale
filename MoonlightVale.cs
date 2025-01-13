@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Myra;
 using Myra.Graphics2D.UI;
@@ -15,18 +16,15 @@ namespace Moonlight_Vale
         private Desktop _desktop;
         private ScreenManager _screenManager;
         private FontSystem _fontSystem;
-        
 
         public MoonlightVale()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            
         }
 
         protected override void Initialize()
         {
-
             base.Initialize();
             ScreenManager.Initialize(this);
             
@@ -46,27 +44,18 @@ namespace Moonlight_Vale
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _fontSystem = new FontSystem();
-            
-            /*TODO make screens receive fontsystem instead of font as arugment -> font is only one size while fontystem is list of many*/
-            
             _fontSystem.AddFont(System.IO.File.ReadAllBytes(  Content.RootDirectory + @"\Fonts\CelticBitRegular.ttf"));
-         //   _font = _fontSystem.GetFont(4);
-
-
         }
 
         protected override void Update(GameTime gameTime)
         {
-
             base.Update(gameTime);
             _screenManager.Update(gameTime);
         }
-
         protected override void Draw(GameTime gameTime)
         {
             _screenManager.Draw(gameTime, _spriteBatch);
             base.Draw(gameTime);
-            
         }
     }
 }
