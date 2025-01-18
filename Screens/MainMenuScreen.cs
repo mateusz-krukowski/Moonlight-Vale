@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
@@ -11,6 +12,8 @@ namespace Moonlight_Vale.Screens;
 
 public class MainMenuScreen : GameScreen
 {
+    private Song mainMenuSong;
+    
     public MainMenuScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontStashSharp.FontSystem fontSystem) :
         base(game, screenManager, spriteBatch, desktop)
     {
@@ -24,7 +27,7 @@ public class MainMenuScreen : GameScreen
 
     public override void Initialize()
     {
-        /*TODO add: soundTrack = game.Content.Load<Song>("path_to_file") */
+        
         
         game.IsMouseVisible = true;
         var panel = new Panel();
@@ -47,7 +50,7 @@ public class MainMenuScreen : GameScreen
             VerticalAlignment = VerticalAlignment.Center,
             Left = 1480,
             Top = 280,
-            Spacing = 20 // Odstępy między przyciskami
+            Spacing = 20 
         };
         
         stackPanel.Widgets.Add(CreateButton("New Game"));
@@ -60,16 +63,20 @@ public class MainMenuScreen : GameScreen
         panel.Widgets.Add(stackPanel);
 
         desktop.Root = panel;
+        
     }
 
     public override void LoadContent(ContentManager content)
     {
-        
+        mainMenuSong = game.Content.Load<Song>( @"Music\MainTheme" );
+        MediaPlayer.Play(mainMenuSong);
+        MediaPlayer.Volume = 0.5f;
+        MediaPlayer.IsRepeating = true; 
     }
 
     public override void Update(GameTime gameTime)
     {
-        
+ 
     }
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -81,6 +88,8 @@ public class MainMenuScreen : GameScreen
 
     public override void Unload()
     {
+        MediaPlayer.Stop();
+        mainMenuSong = null;
         
     }
     
@@ -89,11 +98,10 @@ public class MainMenuScreen : GameScreen
         var button = new TextButton
         {
             Text = text,
-            Font = fontSystem.GetFont(4),
-            ContentVerticalAlignment = VerticalAlignment.Center,
+            Font = fontSystem.GetFont(3.5f),
+            Padding = new Thickness(0,25,0,0),
             
             TextColor = Color.White,
-            OverTextColor = Color.Gray,
             PressedTextColor = Color.LightGray,
             
             Background = new SolidBrush(Color.Transparent),
@@ -105,20 +113,34 @@ public class MainMenuScreen : GameScreen
             Border = new SolidBrush(Color.Black),
             
             Width = 300,
-            Height = 50,
+            Height = 60,
           
         };
 
+        button.MouseEntered += (s, e) =>
+        {
+            button.TextColor = button.TextColor!= Color.Gray? Color.Gray : Color.White;
+        };
         
-
-
+        button.MouseLeft += (s, e) => button.TextColor = Color.White;
+        
         button.Click += (s, e) =>
         {
             
             switch (button.Text)
             {
-                case "New Game": screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop)); break;
-                case "Exit": game.Exit(); break;
+                case "New Game":
+                {
+                    screenManager.RemoveScreen();
+                    screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop));
+                    break;
+                }
+                case "Exit":
+                {
+                    Unload();
+                    game.Exit();
+                    break;
+                }
             }
         };
  

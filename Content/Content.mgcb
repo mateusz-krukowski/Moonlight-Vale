@@ -16,6 +16,12 @@
 #begin Fonts/CelticBitRegular.ttf
 /copy:Fonts/CelticBitRegular.ttf
 
+#begin Music/MainTheme.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Music/MainTheme.ogg
+
 #begin Tilemaps/player_farm_reduced.tmx
 /copy:Tilemaps/player_farm_reduced.tmx
 

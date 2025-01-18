@@ -20,7 +20,9 @@ public class OverworldScreen : GameScreen
     public OverworldScreen(Game game, ScreenManager manager, SpriteBatch batch, Desktop desktop) 
         : base(game, manager, batch, desktop) { }
 
-    public override void Initialize() { }
+    public override void Initialize()
+    {
+    }
     
     public override void LoadContent(ContentManager content)
     {
