@@ -15,7 +15,7 @@ public class SplashScreen : GameScreen
     private double _elapsedTime; 
     private const double _displayDuration = 3000;
     
-    public SplashScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontSystem fontSystem) : base(game, screenManager,
+    public SplashScreen(MoonlightVale game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontSystem fontSystem) : base(game, screenManager,
         spriteBatch, desktop)
     {
         this.game = game;

@@ -8,7 +8,7 @@ namespace Moonlight_Vale.Screens;
 
 public abstract class GameScreen 
 {
-    protected Game game;
+    protected MoonlightVale game;
     protected ScreenManager screenManager;
     protected ContentManager content;
     protected GraphicsDevice graphicsDevice;
@@ -18,7 +18,7 @@ public abstract class GameScreen
     protected Song soundTrack;
     protected bool isSongPlaying;
 
-    public GameScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop)
+    public GameScreen(MoonlightVale game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop)
     {
         this.game = game;
         this.screenManager = screenManager;

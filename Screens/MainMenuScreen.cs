@@ -1,8 +1,6 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
@@ -14,7 +12,7 @@ public class MainMenuScreen : GameScreen
 {
     private Song mainMenuSong;
     
-    public MainMenuScreen(Game game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontStashSharp.FontSystem fontSystem) :
+    public MainMenuScreen(MoonlightVale game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontStashSharp.FontSystem fontSystem) :
         base(game, screenManager, spriteBatch, desktop)
     {
         this.game = game;
@@ -90,7 +88,9 @@ public class MainMenuScreen : GameScreen
     {
         MediaPlayer.Stop();
         mainMenuSong = null;
-        
+        desktop.Widgets.Clear();
+        desktop.Root = null;
+
     }
     
     TextButton CreateButton(string text)

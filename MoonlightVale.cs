@@ -1,10 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Myra;
 using Myra.Graphics2D.UI;
 using FontStashSharp;
-using Microsoft.Xna.Framework.Media;
+
 using Moonlight_Vale.Screens;
 
 namespace Moonlight_Vale
@@ -15,7 +14,7 @@ namespace Moonlight_Vale
         private SpriteBatch _spriteBatch;
         private Desktop _desktop;
         private ScreenManager _screenManager;
-        private FontSystem _fontSystem;
+        public FontSystem _fontSystem { get; private set; }
         
         private const byte WIDTH_RATIO = 16 , HEIGHT_RATIO = 9;
 
@@ -33,7 +32,8 @@ namespace Moonlight_Vale
             Window.Title = "Moonlight Vale";
             _graphics.PreferredBackBufferWidth = 1920;
             _graphics.PreferredBackBufferHeight = 1080;
-            _graphics.ToggleFullScreen();
+            _graphics.ApplyChanges();
+            //_graphics.ToggleFullScreen();
 
             MyraEnvironment.Game = this;
             _desktop = new Desktop();
