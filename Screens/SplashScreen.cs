@@ -78,7 +78,7 @@ public class SplashScreen : GameScreen
     
     public void Dispose()
     {
-        // Wywołaj funkcję usuwającą ekran z maszyny stanów
+        
         screenManager.RemoveScreen();
         screenManager.AddScreen(new MainMenuScreen(game, screenManager, spriteBatch, desktop, fontSystem));
 

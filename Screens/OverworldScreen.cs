@@ -9,6 +9,7 @@ using FontStashSharp;
 using Myra.Graphics2D;
 using Myra.Graphics2D.Brushes;
 using Myra.Graphics2D.UI;
+using MoonlightVale.Player;
 
 namespace Moonlight_Vale.Screens;
 
@@ -16,10 +17,12 @@ public class OverworldScreen : GameScreen
 {
     private Map map;
     private Texture2D tileSet;
+    private Player player;
+    private Camera2D camera;
     
-    private float zoom = 4.0f;
+    private float zoom = 2.0f;
     private int prevScroll;
-    private const float MinZoom = 0.5f, MaxZoom = 10.0f, ZoomSpeed = 0.001f;
+    private const float MinZoom = 1.5f, MaxZoom = 5.0f, ZoomSpeed = 0.1f;
     private bool isInGameMenuActive;
 
     private FontSystem fontSystem;
@@ -38,6 +41,8 @@ public class OverworldScreen : GameScreen
 
     public override void Initialize()
     {
+        player = new Player(new Vector2(129,90));
+        camera = new Camera2D(); // Inicjalizacja kamery
         CreateInGameMenu();
         previousKeyboardState = Keyboard.GetState(); // Initialize previous keyboard state
     }
@@ -46,6 +51,7 @@ public class OverworldScreen : GameScreen
     {
         map = Map.Load(content.RootDirectory + @"\Tilemaps\player_farm_reduced.tmx", content);
         tileSet = map.Tilesets.Values.First().Texture;
+        player.LoadContent(content, @"Spritesheets\hero_spritesheet");
     }
     
     private void CreateInGameMenu()
@@ -97,6 +103,7 @@ public class OverworldScreen : GameScreen
 
     private void exitGame()
     {
+        screenManager.RemoveScreen();
         game.Exit();
     }
 
@@ -105,22 +112,34 @@ public class OverworldScreen : GameScreen
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
 
-        // Handle zooming with the mouse
-        if (keyboard.IsKeyDown(Keys.LeftControl))
-        {
-            zoom = Math.Clamp(zoom + (mouse.ScrollWheelValue - prevScroll) * ZoomSpeed, MinZoom, MaxZoom);
-            prevScroll = mouse.ScrollWheelValue;
-            
-        }
+        player.Update(gameTime, keyboard);
 
-        // Handle toggling the in-game menu
+        // Obsługa zoomu za pomocą scrolla myszki
+        if (mouse.ScrollWheelValue > prevScroll)
+        {
+            zoom = Math.Min(zoom + ZoomSpeed, MaxZoom);
+        }
+        else if (mouse.ScrollWheelValue < prevScroll)
+        {
+            zoom = Math.Max(zoom - ZoomSpeed, MinZoom);
+        }
+        prevScroll = mouse.ScrollWheelValue;
+
+        camera.Zoom = zoom;
+        player.Zoom = zoom;
+        player.Speed = player.Zoom * 50.0f; //to prevent higher speed on smaller zoom value
+
+        // Ustawienie kamery tak, aby bohater był na środku ekranu
+        camera.Position = player.Position - new Vector2( x: 1920 / 2f / zoom - Player.SpriteWidth * zoom / 2f,
+                                                         y: 1080 / 2f / zoom - Player.SpriteHeight * zoom / 2f);
+
+        // Obsługa menu gry
         if (keyboard.IsKeyDown(Keys.Escape) && previousKeyboardState.IsKeyUp(Keys.Escape))
         {
             isInGameMenuActive = !isInGameMenuActive;
-
         }
 
-        previousKeyboardState = keyboard; // Update the previous keyboard state
+        previousKeyboardState = keyboard; // Aktualizacja poprzedniego stanu klawiatury
     }
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -128,13 +147,15 @@ public class OverworldScreen : GameScreen
         graphicsDevice.Clear(Color.Aqua);
         if (map == null) return;
 
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        
+        spriteBatch.Begin(transformMatrix: camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
 
         foreach (var layer in map.Layers.Values)
         {
             DrawLayer(spriteBatch, layer);
         }
-
+        
+        player.Draw(spriteBatch);
         spriteBatch.End();
         
         if (isInGameMenuActive)
@@ -190,3 +211,14 @@ public class OverworldScreen : GameScreen
     }
 }
 
+public class Camera2D
+{
+    public Vector2 Position { get; set; }
+    public float Zoom { get; set; } = 1.0f;
+
+    public Matrix GetViewMatrix()
+    {
+        return Matrix.CreateTranslation(new Vector3(-Position, 0.0f)) * 
+               Matrix.CreateScale(Zoom);
+    }
+}
