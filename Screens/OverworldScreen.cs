@@ -53,7 +53,7 @@ public class OverworldScreen : GameScreen
 
     public override void Initialize()
     {
-        player = new Player(new Vector2(129, 90));
+        
         camera = new Camera2D();
 
         // Create the root panel and sub-panels
@@ -75,6 +75,7 @@ public class OverworldScreen : GameScreen
     {
         map = Map.Load(content.RootDirectory + @"\Tilemaps\player_farm_reduced.tmx", content);
         tileSet = map.Tilesets.Values.First().Texture;
+        player = new Player(new Vector2(129, 90), map); 
         player.LoadContent(content, @"Spritesheets\hero_spritesheet");
     }
 
@@ -157,7 +158,7 @@ public class OverworldScreen : GameScreen
                 TextColor = Color.White,
                 TextAlign = TextHorizontalAlignment.Center,
                 
-                Padding = new Thickness(0, 24, 0, 0),
+                Padding = new Thickness(0, 30, 0, 0),
                 
                 Background = new SolidBrush(Color.LightGray),
                 Border = new SolidBrush(Color.White),
@@ -271,6 +272,11 @@ public class OverworldScreen : GameScreen
             
             font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
             font.DrawText(spriteBatch, $"Selected Item: {player.SelectedItem}", new Vector2(20, 250), Color.White);
+            
+            font.DrawText(spriteBatch, $"UpBorder: {player.UpBorder}", new Vector2(20, 300), Color.White);
+            font.DrawText(spriteBatch, $"DownBorder: {player.DownBorder}", new Vector2(20, 350), Color.White);
+            font.DrawText(spriteBatch, $"LeftBorder: {player.LeftBorder}", new Vector2(20, 400), Color.White);
+            font.DrawText(spriteBatch, $"RightBorder: {player.RightBorder}", new Vector2(20, 450), Color.White);
             
             spriteBatch.End();
         }

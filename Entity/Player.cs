@@ -1,8 +1,9 @@
-﻿using System;
+﻿using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Squared.Tiled;
 
 namespace Moonlight_Vale.Entity;
 
@@ -12,6 +13,7 @@ public class Player
     private Vector2 position;
     private Vector2 velocity;
     private SpriteEffects spriteEffect;
+    private Map map;
     private int frame;
     private float animationTimer;
     private float animationSpeed = 0.2f;
@@ -24,6 +26,11 @@ public class Player
     private const int spriteHeight = 24;
 
     private int _selectedItem = 1;
+    
+    public float UpBorder { get; private set; }
+    public float DownBorder { get; private set; }
+    public float LeftBorder { get; private set; }
+    public float RightBorder { get; private set; }
 
     // Properties
     public float Speed
@@ -43,49 +50,14 @@ public class Player
         get => velocity;
         set => velocity = value;
     }
-
-    public int Frame
-    {
-        get => frame;
-        set => frame = value;
-    }
-
-    public float AnimationTimer
-    {
-        get => animationTimer;
-        set => animationTimer = value;
-    }
-
-    public float AnimationSpeed
-    {
-        get => animationSpeed;
-        set => animationSpeed = value;
-    }
+    
 
     public float Zoom
     {
         get => zoom;
         set => zoom = value;
     }
-
-    public SpriteEffects SpriteEffect
-    {
-        get => spriteEffect;
-        set => spriteEffect = value;
-    }
-
-    public int CurrentRow
-    {
-        get => currentRow;
-        set => currentRow = value;
-    }
-
-    public bool Ascending
-    {
-        get => ascending;
-        set => ascending = value;
-    }
-
+    
     public int SpriteWidth
     {
         get => spriteWidth;
@@ -102,13 +74,14 @@ public class Player
         set => _selectedItem = value < 10 && value >=0? value: 0;
     }
 
-    public Player(Vector2 startPosition)
+    public Player(Vector2 startPosition, Map map)
     {
         position = startPosition;
         frame = 1;
         animationTimer = 0;
         currentRow = 0;
         spriteEffect = SpriteEffects.None;
+        this.map = map;
     }
 
     public void LoadContent(ContentManager content, string spriteSheetPath)
@@ -135,6 +108,16 @@ public class Player
             case var k when k.IsKeyDown(Keys.D):
                 Move(Vector2.UnitX * Speed, deltaTime, 1, SpriteEffects.FlipHorizontally);
                 break;
+            
+            default:
+                frame = 1; // Reset to neutral position
+                break;
+        }
+
+        position += velocity * deltaTime;
+
+        switch (keyboard) //second switch allows changing item while moving
+        {
             case var k when k.IsKeyDown(Keys.D1):
                 this.SelectedItem = 0;
                 break;
@@ -165,12 +148,7 @@ public class Player
             case var k when k.IsKeyDown(Keys.D0):
                 this.SelectedItem = 9;
                 break;
-            default:
-                frame = 1; // Reset to neutral position
-                break;
         }
-
-        position += velocity * deltaTime;
     }
 
     private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
@@ -178,7 +156,33 @@ public class Player
         velocity = direction;
         currentRow = row;
         spriteEffect = effect;
-        UpdateAnimation(deltaTime);
+
+        // Obliczanie pozycji granic
+        UpBorder = position.Y;
+        DownBorder = position.Y + spriteHeight * zoom;
+        LeftBorder = position.X;
+        RightBorder = position.X + spriteWidth * zoom;
+
+        // Sprawdzanie, czy bohater może wejść na dany kafelek
+
+        
+            position += velocity * deltaTime;
+            UpdateAnimation(deltaTime);
+        
+    }
+    
+    private bool CanMoveToTile(Vector2 borderPosition)
+    {
+        Vector2 tileIndex = GetTileIndex(borderPosition);
+        int? tileId = map.Layers.Values.First().GetTile((int)tileIndex.X, (int)tileIndex.Y);
+        return tileId == 1; // Tylko kafelki o ID 1 są dozwolone
+    }
+    
+    private Vector2 GetTileIndex(Vector2 position)
+    {
+        int tileX = (int)(position.X / (map.TileWidth * zoom));
+        int tileY = (int)(position.Y / (map.TileHeight * zoom));
+        return new Vector2(tileX, tileY);
     }
 
     private void UpdateAnimation(float deltaTime)

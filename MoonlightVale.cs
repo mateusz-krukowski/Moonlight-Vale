@@ -6,6 +6,16 @@ using FontStashSharp;
 
 using Moonlight_Vale.Screens;
 
+/*TODO:
+    - collisions between player and tiles
+    - changing tilemap (digging hoeing cropping harvesting etc)
+    - bagpack 
+    - settings window
+    - saving game and loading saves!!!
+    - SFX
+*/
+
+
 namespace Moonlight_Vale
 {
     public class MoonlightVale : Game
