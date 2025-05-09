@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -9,30 +10,42 @@ namespace Moonlight_Vale.Entity;
 
 public class Player
 {
+/* TODO
+    mechanika stawiania klockow
+        player w prawo = x wiekszy
+         playerr w lewo = x mniejszy
+        player do gory = y mniejszy
+        player w dol = y wiekszyw
+ */    
+    
     private Texture2D spriteSheet;
     private Vector2 position;
+    
     private Vector2 velocity;
     private SpriteEffects spriteEffect;
     private Map map;
     private int frame;
     private float animationTimer;
-    private float animationSpeed = 0.2f;
-    private float zoom = 4.0f;
+    private float animationSpeed = 0.18f;
+    private float zoom = 2.0f;
     private int currentRow;
     private bool ascending = true;
 
-    private float speed = 200f;
+    private float speed = 3200f;
     private const int spriteWidth = 16;
     private const int spriteHeight = 24;
+    private const float HeadOffset = 6f; // Nowa stała dla offsetu głowy
 
     private int _selectedItem = 1;
+    
+    private Vector2 direction;
+    public Vector2 Direction => direction;
     
     public float UpBorder { get; private set; }
     public float DownBorder { get; private set; }
     public float LeftBorder { get; private set; }
     public float RightBorder { get; private set; }
 
-    // Properties
     public float Speed
     {
         get => speed;
@@ -50,7 +63,6 @@ public class Player
         get => velocity;
         set => velocity = value;
     }
-    
 
     public float Zoom
     {
@@ -82,6 +94,7 @@ public class Player
         currentRow = 0;
         spriteEffect = SpriteEffects.None;
         this.map = map;
+        UpdateBorders(); // Inicjalizacja granic
     }
 
     public void LoadContent(ContentManager content, string spriteSheetPath)
@@ -94,6 +107,8 @@ public class Player
         float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
         velocity = Vector2.Zero;
 
+        
+        //movement animation
         switch (keyboard)
         {
             case var k when k.IsKeyDown(Keys.W):
@@ -110,72 +125,147 @@ public class Player
                 break;
             
             default:
-                frame = 1; // Reset to neutral position
+                frame = 1;
                 break;
         }
 
-        position += velocity * deltaTime;
-
-        switch (keyboard) //second switch allows changing item while moving
+        switch (keyboard)
         {
-            case var k when k.IsKeyDown(Keys.D1):
-                this.SelectedItem = 0;
-                break;
-            case var k when k.IsKeyDown(Keys.D2):
-                this.SelectedItem = 1;
-                break;
-            case var k when k.IsKeyDown(Keys.D3):
-                this.SelectedItem = 2;
-                break;
-            case var k when k.IsKeyDown(Keys.D4):
-                this.SelectedItem = 3;
-                break;
-            case var k when k.IsKeyDown(Keys.D5):
-                this.SelectedItem = 4;
-                break;
-            case var k when k.IsKeyDown(Keys.D6):
-                this.SelectedItem = 5;
-                break;
-            case var k when k.IsKeyDown(Keys.D7):
-                this.SelectedItem = 6;
-                break;
-            case var k when k.IsKeyDown(Keys.D8):
-                this.SelectedItem = 7;
-                break;
-            case var k when k.IsKeyDown(Keys.D9):
-                this.SelectedItem = 8;
-                break;
-            case var k when k.IsKeyDown(Keys.D0):
-                this.SelectedItem = 9;
-                break;
+            case var k when k.IsKeyDown(Keys.D1): this.SelectedItem = 0; break;
+            case var k when k.IsKeyDown(Keys.D2): this.SelectedItem = 1; break;
+            case var k when k.IsKeyDown(Keys.D3): this.SelectedItem = 2; break;
+            case var k when k.IsKeyDown(Keys.D4): this.SelectedItem = 3; break;
+            case var k when k.IsKeyDown(Keys.D5): this.SelectedItem = 4; break;
+            case var k when k.IsKeyDown(Keys.D6): this.SelectedItem = 5; break;
+            case var k when k.IsKeyDown(Keys.D7): this.SelectedItem = 6; break;
+            case var k when k.IsKeyDown(Keys.D8): this.SelectedItem = 7; break;
+            case var k when k.IsKeyDown(Keys.D9): this.SelectedItem = 8; break;
+            case var k when k.IsKeyDown(Keys.D0): this.SelectedItem = 9; break;
+        }
+        
+        switch(keyboard)
+        {
+            case var k when k.IsKeyDown(Keys.E): HandleTileReplacement() ; break;
         }
     }
 
-    private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
+    private void HandleTileReplacement()
     {
-        velocity = direction;
-        currentRow = row;
-        spriteEffect = effect;
-
-        // Obliczanie pozycji granic
-        UpBorder = position.Y;
-        DownBorder = position.Y + spriteHeight * zoom;
-        LeftBorder = position.X;
-        RightBorder = position.X + spriteWidth * zoom;
-
-        // Sprawdzanie, czy bohater może wejść na dany kafelek
-
         
-            position += velocity * deltaTime;
-            UpdateAnimation(deltaTime);
+        string directionName = GetDirectionName(Direction);
+        
+        Vector2 tileIndex = GetTargetTileIndex(position, Direction);
+
+        if (tileIndex.X < 0 || tileIndex.Y < 0)
+        {
+            Console.WriteLine("Invalid tile index");
+            return;
+        }
+
+        // Pobierz warstwę mapy
+        var layer = map.Layers.Values.FirstOrDefault();
+        if (layer == null) return;
+
+        // Zmień ID kafelka na nowe (np. z 0,0 na 0,1)
+        int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+        if (currentTileId > 0)
+        {
+            layer.Tiles[(int)(tileIndex.Y * layer.Width + tileIndex.X)] = 12; // Nowy ID kafelka
+            Console.WriteLine($"Tile at {tileIndex} changed!");
+        }
+        
+        Console.WriteLine($"Player direction: {directionName}");
+        
+        
+        // pomocnicza funkcja do namierzania kierunku bohatera
+        string GetDirectionName(Vector2 direction)
+        {
+            if (direction == Vector2.Zero)
+                return "Idle"; // Gracz się nie porusza
+
+            if (Math.Abs(direction.X) > Math.Abs(direction.Y))
+            {
+                return direction.X > 0 ? "Right" : "Left";
+            }
+            else
+            {
+                return direction.Y > 0 ? "Down" : "Up";
+            }
+        }
         
     }
     
+    private Vector2 GetTargetTileIndex(Vector2 position, Vector2 direction)
+    {
+        // Oblicz przesunięcie w zależności od kierunku
+        Vector2 offset = Vector2.Zero;
+        if (direction.X > 0) offset = Vector2.UnitX;         // Right
+        else if (direction.X < 0) offset = -Vector2.UnitX;   // Left
+        else if (direction.Y > 0) offset = Vector2.UnitY;    // Down
+        else if (direction.Y < 0) offset = -Vector2.UnitY;   // Up
+
+        // Przekształć pozycję gracza na indeks kafelka
+        Vector2 currentTileIndex = GetTileIndex(position);
+
+        // Przesunięcie w dół o 1 kafelek (z torsu bohatera)
+        currentTileIndex.Y += 1;
+
+        // Zastosuj przesunięcie wynikające z kierunku
+        return currentTileIndex + offset;
+    }
+    
+    
+
+    private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
+    {
+        spriteEffect = effect;
+        currentRow = row;
+
+        // Aktualizacja kierunku gracza
+        this.direction = direction != Vector2.Zero ? Vector2.Normalize(direction) : this.direction;
+
+        Vector2 newPosition = position + direction * deltaTime;
+        float scaledHeadOffset = HeadOffset * zoom;
+
+        float newUpBorder = newPosition.Y + scaledHeadOffset;
+        float newDownBorder = newPosition.Y + (spriteHeight * zoom);
+        float newLeftBorder = newPosition.X;
+        float newRightBorder = newPosition.X + (spriteWidth * zoom);
+
+        bool canMoveHorizontally = CanMoveToTile(new Vector2(newLeftBorder, newUpBorder)) && 
+                                   CanMoveToTile(new Vector2(newRightBorder, newUpBorder));
+        bool canMoveVertically = CanMoveToTile(new Vector2(position.X, newUpBorder)) && 
+                                 CanMoveToTile(new Vector2(position.X, newDownBorder));
+
+        if (direction.X != 0 && canMoveHorizontally)
+        {
+            position.X += direction.X * deltaTime;
+        }
+
+        if (direction.Y != 0 && canMoveVertically)
+        {
+            position.Y += direction.Y * deltaTime;
+        }
+
+        UpdateAnimation(deltaTime);
+        UpdateBorders();
+    }
+
+
+    private void UpdateBorders()
+    {
+        float scaledHeadOffset = HeadOffset * zoom;
+        UpBorder = position.Y + scaledHeadOffset;
+        DownBorder = position.Y + spriteHeight * zoom;
+        LeftBorder = position.X;
+        RightBorder = position.X + spriteWidth * zoom;
+    }
+
     private bool CanMoveToTile(Vector2 borderPosition)
     {
         Vector2 tileIndex = GetTileIndex(borderPosition);
         int? tileId = map.Layers.Values.First().GetTile((int)tileIndex.X, (int)tileIndex.Y);
-        return tileId == 1; // Tylko kafelki o ID 1 są dozwolone
+        return tileId <= 12;
     }
     
     private Vector2 GetTileIndex(Vector2 position)

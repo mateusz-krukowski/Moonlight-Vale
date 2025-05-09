@@ -21,9 +21,7 @@ public class OverworldScreen : GameScreen
     private Player player;
     private Camera2D camera;
 
-    private float zoom = 2.0f;
-    private int prevScroll;
-    private const float MinZoom = 1.5f, MaxZoom = 5.0f, ZoomSpeed = 0.1f;
+    private float zoom = 2.0f; // Stała wartość zoom
 
     private FontSystem fontSystem;
     private Desktop desktop;
@@ -32,8 +30,7 @@ public class OverworldScreen : GameScreen
 
     public Grid HUD { get; private set; }
     
-    
-//! DevTools are being displayed immediately via FontStashSharp not MyraUI!
+    //! DevTools are being displayed immediately via FontStashSharp not MyraUI!
 
     private bool isInGameMenuActive;
     private bool isHUDActive;
@@ -53,8 +50,10 @@ public class OverworldScreen : GameScreen
 
     public override void Initialize()
     {
-        
-        camera = new Camera2D();
+        camera = new Camera2D
+        {
+            Zoom = zoom // Stała wartość zoom
+        };
 
         // Create the root panel and sub-panels
         var rootPanel = new Panel();
@@ -75,7 +74,7 @@ public class OverworldScreen : GameScreen
     {
         map = Map.Load(content.RootDirectory + @"\Tilemaps\player_farm_reduced.tmx", content);
         tileSet = map.Tilesets.Values.First().Texture;
-        player = new Player(new Vector2(129, 90), map); 
+        player = new Player(new Vector2(129, 150), map); 
         player.LoadContent(content, @"Spritesheets\hero_spritesheet");
     }
 
@@ -87,7 +86,6 @@ public class OverworldScreen : GameScreen
             Height = 1080,
             Spacing = 20,
             Margin = new Thickness(0, 360, 0, 0),
-            
         };
 
         menu.Widgets.Add(CreateButton("Return to Game", () => { isInGameMenuActive = false; }));
@@ -195,22 +193,10 @@ public class OverworldScreen : GameScreen
     public override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
-        var mouse = Mouse.GetState();
 
         player.Update(gameTime, keyboard);
 
-        // Zoom logic
-        if (mouse.ScrollWheelValue > prevScroll)
-        {
-            zoom = Math.Min(zoom + ZoomSpeed, MaxZoom);
-        }
-        else if (mouse.ScrollWheelValue < prevScroll)
-        {
-            zoom = Math.Max(zoom - ZoomSpeed, MinZoom);
-        }
-        prevScroll = mouse.ScrollWheelValue;
-
-        camera.Zoom = zoom;
+        // Stała wartość zoom
         player.Zoom = zoom;
         player.Speed = player.Zoom * 50.0f;
 
@@ -273,10 +259,10 @@ public class OverworldScreen : GameScreen
             font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
             font.DrawText(spriteBatch, $"Selected Item: {player.SelectedItem}", new Vector2(20, 250), Color.White);
             
-            font.DrawText(spriteBatch, $"UpBorder: {player.UpBorder}", new Vector2(20, 300), Color.White);
-            font.DrawText(spriteBatch, $"DownBorder: {player.DownBorder}", new Vector2(20, 350), Color.White);
-            font.DrawText(spriteBatch, $"LeftBorder: {player.LeftBorder}", new Vector2(20, 400), Color.White);
-            font.DrawText(spriteBatch, $"RightBorder: {player.RightBorder}", new Vector2(20, 450), Color.White);
+            font.DrawText(spriteBatch, $"UpBorder: {(int)player.UpBorder}", new Vector2(20, 300), Color.White);
+            font.DrawText(spriteBatch, $"DownBorder: {(int)player.DownBorder}", new Vector2(20, 350), Color.White);
+            font.DrawText(spriteBatch, $"LeftBorder: {(int)player.LeftBorder}", new Vector2(20, 400), Color.White);
+            font.DrawText(spriteBatch, $"RightBorder: {(int)player.RightBorder}", new Vector2(20, 450), Color.White);
             
             spriteBatch.End();
         }
