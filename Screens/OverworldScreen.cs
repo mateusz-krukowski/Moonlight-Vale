@@ -15,13 +15,15 @@ using Moonlight_Vale.Entity;
 namespace Moonlight_Vale.Screens;
 
 public class OverworldScreen : GameScreen
+
 {
     private Map map;
     private Texture2D tileSet;
     private Player player;
     private Camera2D camera;
 
-    private float zoom = 2.0f; // Stała wartość zoom
+    private float zoom = 2.0f;
+    private int prevScroll;
 
     private FontSystem fontSystem;
     private Desktop desktop;
@@ -30,7 +32,8 @@ public class OverworldScreen : GameScreen
 
     public Grid HUD { get; private set; }
     
-    //! DevTools are being displayed immediately via FontStashSharp not MyraUI!
+    
+//! DevTools are being displayed immediately via FontStashSharp not MyraUI!
 
     private bool isInGameMenuActive;
     private bool isHUDActive;
@@ -50,10 +53,8 @@ public class OverworldScreen : GameScreen
 
     public override void Initialize()
     {
-        camera = new Camera2D
-        {
-            Zoom = zoom // Stała wartość zoom
-        };
+        
+        camera = new Camera2D();
 
         // Create the root panel and sub-panels
         var rootPanel = new Panel();
@@ -86,6 +87,7 @@ public class OverworldScreen : GameScreen
             Height = 1080,
             Spacing = 20,
             Margin = new Thickness(0, 360, 0, 0),
+            
         };
 
         menu.Widgets.Add(CreateButton("Return to Game", () => { isInGameMenuActive = false; }));
@@ -193,10 +195,11 @@ public class OverworldScreen : GameScreen
     public override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
+        var mouse = Mouse.GetState();
 
         player.Update(gameTime, keyboard);
 
-        // Stała wartość zoom
+        camera.Zoom = zoom;
         player.Zoom = zoom;
         player.Speed = player.Zoom * 50.0f;
 
