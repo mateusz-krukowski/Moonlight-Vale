@@ -16,7 +16,6 @@ public class HudManager
     private VerticalStackPanel inGameMenu;
 
     public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
-    public MouseState Mouse;
     public Desktop Desktop => overworldScreen.Desktop;
     public FontSystem FontSystem => overworldScreen.FontSystem;
 
@@ -151,5 +150,16 @@ public class HudManager
 
         menu.Visible = false;
         return menu;
+    }
+
+    private Widget CreateTimeWidget()
+    {
+        return null;
+    }
+
+    private Widget CreateCharacterPortrait()
+    {
+        return null;
+        //pora na CS'a
     }
 }

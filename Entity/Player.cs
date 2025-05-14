@@ -264,7 +264,7 @@ public class Player
     private bool CanMoveToTile(Vector2 borderPosition)
     {
         Vector2 tileIndex = GetTileIndex(borderPosition);
-        int? tileId = map.Layers.Values.First().GetTile((int)tileIndex.X, (int)tileIndex.Y);
+        int? tileId = map.Layers.Values[1].GetTile((int)tileIndex.X, (int)tileIndex.Y);
         return tileId <= 12;
     }
     

@@ -127,7 +127,8 @@ namespace Moonlight_Vale.Screens
                 Vector2? tileIndex = GetTileIndex(Player.Position);
                 font.DrawText(spriteBatch, $"Tile index: {tileIndex?.X}, {tileIndex?.Y}", new Vector2(20, 100), Color.White);
 
-                var layer = Map.Layers.Values.First();
+                var layer = Map.Layers.Values[0];
+                Console.WriteLine(layer);
                 int? tileId = layer.GetTile((int)tileIndex?.X, (int)tileIndex?.Y);
                 font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
 
@@ -174,7 +175,8 @@ namespace Moonlight_Vale.Screens
             return new Vector2(tileX, tileY);
         }
     }
-
+    
+    // Camera2D helper class to handle camera transformations
     public class Camera2D
     {
         public Vector2 Position { get; set; }
