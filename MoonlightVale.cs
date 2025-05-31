@@ -7,7 +7,8 @@ using FontStashSharp;
 using Moonlight_Vale.Screens;
 
 /*TODO:
-    - collisions between player and tiles
+    - collisions between player and tiles (kinda done)
+    - transition between maps
     - changing tilemap (digging hoeing cropping harvesting etc)
     - bagpack 
     - settings window
@@ -42,8 +43,8 @@ namespace Moonlight_Vale
             Window.Title = "Moonlight Vale";
             _graphics.PreferredBackBufferWidth = 1920;
             _graphics.PreferredBackBufferHeight = 1080;
-            _graphics.ApplyChanges();
-            //_graphics.ToggleFullScreen();
+            _graphics.ApplyChanges(); 
+            _graphics.ToggleFullScreen();
 
             MyraEnvironment.Game = this;
             _desktop = new Desktop();

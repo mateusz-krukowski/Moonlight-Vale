@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Moonlight_Vale.Screens;
 using Squared.Tiled;
 
 namespace Moonlight_Vale.Entity;
@@ -45,6 +46,8 @@ public class Player
     public float DownBorder { get; private set; }
     public float LeftBorder { get; private set; }
     public float RightBorder { get; private set; }
+    
+    public OverworldScreen OverworldScreen { get; set; }
 
     public float Speed
     {
@@ -163,10 +166,10 @@ public class Player
         }
 
         // Pobierz warstwę mapy
-        var layer = map.Layers.Values.FirstOrDefault();
+        var layer = map.Layers.Values[0];
         if (layer == null) return;
 
-        // Zmień ID kafelka na nowe (np. z 0,0 na 0,1)
+        // Zmień ID kafelka na nowe 
         int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
         if (currentTileId > 0)
         {
@@ -264,7 +267,7 @@ public class Player
     private bool CanMoveToTile(Vector2 borderPosition)
     {
         Vector2 tileIndex = GetTileIndex(borderPosition);
-        int? tileId = map.Layers.Values[1].GetTile((int)tileIndex.X, (int)tileIndex.Y);
+        int? tileId = map.Layers.Values[0].GetTile((int)tileIndex.X, (int)tileIndex.Y);
         return tileId <= 12;
     }
     

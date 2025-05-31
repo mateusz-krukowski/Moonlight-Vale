@@ -8,18 +8,26 @@ using System.Linq;
 using FontStashSharp;
 using Myra.Graphics2D.UI;
 using Moonlight_Vale.Entity;
+using Moonlight_Vale.Screens.Maps;
+using Moonlight_Vale.Systems;
 
 namespace Moonlight_Vale.Screens
 {
     public class OverworldScreen : GameScreen
     {
-        public Map Map { get; private set; }
+        public Map Map { get; private set; } // From Squared.Tiled
+        public IMap CurrentMap { get; private set; } // Interface for map functionality
         public Texture2D TileSet { get; private set; }
         public Player Player { get; private set; }
         public Camera2D Camera { get; private set; }
-        public float Zoom { get; private set; } = 2.0f;
         public FontSystem FontSystem { get; private set; }
         public Desktop Desktop { get; private set; }
+        
+        // Systems
+        public TimeSystem TimeSystem { get; private set; } 
+        public SavingSystem SavingSystem { get; private set; } 
+        
+        public float Zoom { get; private set; } = 2.0f;
 
         public bool isInGameMenuActive;
         public bool isHUDActive;
@@ -41,6 +49,13 @@ namespace Moonlight_Vale.Screens
 
         public override void Initialize()
         {
+            /*
+             *  if not new game:
+             *      Load saved game data
+             *  else:
+             *      Initialize new game data
+             */
+            
             Camera = new Camera2D();
 
             HudManager = new HudManager(this);
