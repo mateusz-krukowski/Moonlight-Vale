@@ -56,6 +56,8 @@ namespace Moonlight_Vale.Screens
              *      Initialize new game data
              */
             
+            TimeSystem.Instance.Start();
+            
             Camera = new Camera2D();
 
             HudManager = new HudManager(this);
@@ -112,6 +114,8 @@ namespace Moonlight_Vale.Screens
                 previousKeyboardState.IsKeyUp(Keys.Z))
                 isHUDActive = !isHUDActive;
 
+            HudManager.UpdateTime();
+            HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
 
             previousKeyboardState = keyboard;

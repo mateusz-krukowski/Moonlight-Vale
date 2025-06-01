@@ -28,8 +28,6 @@ public class SplashScreen : GameScreen
 
     public override void Initialize()
     {
-        
-        
         var panel = new Panel();
 
         var titleLabel = new Label

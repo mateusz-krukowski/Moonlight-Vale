@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Media;
+using Moonlight_Vale.Systems;
 using Myra.Graphics2D;
 using Myra.Graphics2D.UI;
 using Myra.Graphics2D.Brushes;
@@ -11,6 +12,14 @@ namespace Moonlight_Vale.Screens;
 public class MainMenuScreen : GameScreen
 {
     private Song mainMenuSong;
+    private Texture2D backgroundTexture;
+    
+    /*colors*/
+    private static readonly Color BUTTON_COLOR = new Color(129,88,46); //base
+    private static readonly Color BUTTON_HOVER_COLOR = new Color(142,105,67); //lighter
+    private static readonly Color BUTTON_PRESSED_COLOR = new Color(116,79,41); //darker
+    
+    public SavingSystem SavingSystem { get; private set; }
     
     public MainMenuScreen(MoonlightVale game, ScreenManager screenManager, SpriteBatch spriteBatch, Desktop desktop, FontStashSharp.FontSystem fontSystem) :
         base(game, screenManager, spriteBatch, desktop)
@@ -46,9 +55,9 @@ public class MainMenuScreen : GameScreen
         {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Center,
-            Left = 1480,
-            Top = 280,
-            Spacing = 20 
+            Left = 1420,
+            Top = 160,
+            Spacing = 38 
         };
         
         stackPanel.Widgets.Add(CreateButton("New Game"));
@@ -67,6 +76,7 @@ public class MainMenuScreen : GameScreen
     public override void LoadContent(ContentManager content)
     {
         mainMenuSong = game.Content.Load<Song>( @"Music\MainTheme" );
+        backgroundTexture = content.Load<Texture2D>(@"Images\Main_Menu");
         MediaPlayer.Play(mainMenuSong);
         MediaPlayer.Volume = 0.5f;
         MediaPlayer.IsRepeating = true; 
@@ -80,6 +90,9 @@ public class MainMenuScreen : GameScreen
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         graphicsDevice.Clear(new Color(135, 206, 235));
+        spriteBatch.Begin();
+        spriteBatch.Draw(backgroundTexture, new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height), Color.White);
+        spriteBatch.End();
         desktop.Render(); // !!! important to make GUI visible
         
     }
@@ -99,30 +112,24 @@ public class MainMenuScreen : GameScreen
         {
             Text = text,
             Font = fontSystem.GetFont(3.5f),
-            Padding = new Thickness(0,25,0,0),
+            Padding = new Thickness(0,35,0,0),
             
             TextColor = Color.White,
             PressedTextColor = Color.LightGray,
             
-            Background = new SolidBrush(Color.Transparent),
-            PressedBackground = new SolidBrush(Color.Transparent),
-            OverBackground = new SolidBrush(Color.Transparent),
+            Background = new SolidBrush(BUTTON_COLOR),
+            PressedBackground = new SolidBrush(BUTTON_PRESSED_COLOR),
+            OverBackground = new SolidBrush(BUTTON_HOVER_COLOR),
             FocusedBackground = new SolidBrush(Color.Transparent),
             
-            BorderThickness = new Thickness(1),
+            BorderThickness = new Thickness(2),
             Border = new SolidBrush(Color.Black),
             
-            Width = 300,
-            Height = 60,
+            Width = 370, //TODO: proportional to the number of letters!
+            Height = 85,
           
         };
-
-        button.MouseEntered += (s, e) =>
-        {
-            button.TextColor = button.TextColor!= Color.Gray? Color.Gray : Color.White;
-        };
         
-        button.MouseLeft += (s, e) => button.TextColor = Color.White;
         
         button.Click += (s, e) =>
         {

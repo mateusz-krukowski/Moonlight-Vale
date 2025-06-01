@@ -37,7 +37,7 @@ public class Player
     private const int spriteHeight = 24;
     private const float HeadOffset = 6f; // Nowa stała dla offsetu głowy
 
-    private int _selectedItem = 1;
+    private int _selectedItem = 0;
     
     private Vector2 direction;
     public Vector2 Direction => direction;

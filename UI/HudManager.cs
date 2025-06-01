@@ -1,23 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
 using FontStashSharp;
 using FontStashSharp.RichText;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Moonlight_Vale.Screens;
+using Moonlight_Vale.Systems;
 using Myra.Graphics2D;
 using Myra.Graphics2D.Brushes;
 using Myra.Graphics2D.UI;
 
 public class HudManager
 {
+    private Label timeLabel;
     private OverworldScreen overworldScreen;
 
     private Grid hud;
+    private HorizontalStackPanel itemBar;
     private VerticalStackPanel inGameMenu;
 
     public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
     public Desktop Desktop => overworldScreen.Desktop;
     public FontSystem FontSystem => overworldScreen.FontSystem;
+    
+    public TimeSystem TimeSystem = TimeSystem.Instance;
 
     public HudManager(OverworldScreen overworldScreen)
     {
@@ -43,6 +49,22 @@ public class HudManager
         inGameMenu.Visible = menuVisible;
     }
 
+    public void UpdateTime()
+    {
+        timeLabel.Text = $"{TimeSystem.CurrentHour:D2}:{TimeSystem.CurrentMinute:D2} - {TimeSystem.CurrentPeriod}";
+    }
+    
+    public void UpdateItemBarSelection(int selectedIndex)
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            if (i == selectedIndex)
+                itemBar.Widgets[i].Border = new SolidBrush(Color.Green);
+            else
+                itemBar.Widgets[i].Border = new SolidBrush(Color.White);
+        }
+    }
+
     public void Draw()
     {
         Desktop.Render();
@@ -59,11 +81,11 @@ public class HudManager
             Height = 1080
         };
 
-        var itemBar = new HorizontalStackPanel
+         itemBar = new HorizontalStackPanel
         {
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Padding = new Thickness(0, 0, 0, 64),
+            Padding = new Thickness(0, 0, 0, 34),
             Spacing = 8
         };
 
@@ -73,8 +95,7 @@ public class HudManager
             {
                 Width = 64,
                 Height = 64,
-                Background = new SolidBrush(Color.LightGray),
-                Border = new SolidBrush(Color.White),
+                Background = new SolidBrush(new Color(142,105,67)),
                 BorderThickness = new Thickness(4)
             });
         }
@@ -83,7 +104,7 @@ public class HudManager
         {
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Padding = new Thickness(0, 0, 100, 64),
+            Padding = new Thickness(0, 0, 100, 34),
             Spacing = 8
         };
 
@@ -99,14 +120,17 @@ public class HudManager
                 TextColor = Color.White,
                 TextAlign = TextHorizontalAlignment.Center,
                 Padding = new Thickness(0, 30, 0, 0),
-                Background = new SolidBrush(Color.LightGray),
+                Background = new SolidBrush(new Color(142,105,67)),
                 Border = new SolidBrush(Color.White),
                 BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             });
         }
-
+        
+        var timeWidget = CreateTimeWidget();
+        
+        grid.Widgets.Add(timeWidget);
         grid.Widgets.Add(itemBar);
         grid.Widgets.Add(utilities);
 
@@ -154,7 +178,22 @@ public class HudManager
 
     private Widget CreateTimeWidget()
     {
-        return null;
+        timeLabel = new Label
+        {
+            Text = $"{TimeSystem.CurrentHour:D2}:{TimeSystem.CurrentMinute:D2} - {TimeSystem.CurrentPeriod}",
+            Font = FontSystem.GetFont(4),
+            TextColor = Color.White,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 30, 20, 0),
+            Padding = new Thickness(5,30,0,0),
+            Width = 350,
+            Height = 90,
+            Border = new SolidBrush(Color.White),
+            BorderThickness = new Thickness(2),
+            Background = new SolidBrush(new Color(142,105,67))
+        };
+        return timeLabel;
     }
 
     private Widget CreateCharacterPortrait()
