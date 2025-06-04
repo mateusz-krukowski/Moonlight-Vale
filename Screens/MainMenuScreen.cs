@@ -29,13 +29,10 @@ public class MainMenuScreen : GameScreen
         this.spriteBatch = spriteBatch;
         this.desktop = desktop;
         this.fontSystem = fontSystem;
-        
     }
 
     public override void Initialize()
     {
-        
-        
         game.IsMouseVisible = true;
         var panel = new Panel();
         
@@ -70,7 +67,6 @@ public class MainMenuScreen : GameScreen
         panel.Widgets.Add(stackPanel);
 
         desktop.Root = panel;
-        
     }
 
     public override void LoadContent(ContentManager content)

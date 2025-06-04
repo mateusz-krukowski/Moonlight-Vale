@@ -15,6 +15,12 @@ namespace Moonlight_Vale.Screens
 {
     public class OverworldScreen : GameScreen
     {
+        /*
+         TODO:
+            - Player ma swojego zooma i overworldscreen ma swojego, ujednolicic to
+            - Zrozumiec jak dziala translacja kamery
+            - przez offset glowy gracz moze stawiac klocki nad soba bo gra mysli ze to klocek nizej np dom moze zakryc
+         */
         public Map Map { get; private set; } // From Squared.Tiled
         public IMap CurrentMap { get; private set; } // Interface for map functionality
         public Texture2D TileSet { get; private set; }
@@ -22,10 +28,6 @@ namespace Moonlight_Vale.Screens
         public Camera2D Camera { get; private set; }
         public FontSystem FontSystem { get; private set; }
         public Desktop Desktop { get; private set; }
-        
-        // Systems
-        public TimeSystem TimeSystem { get; private set; } 
-        public SavingSystem SavingSystem { get; private set; } 
         
         public float Zoom { get; private set; } = 2.0f;
 
@@ -134,6 +136,8 @@ namespace Moonlight_Vale.Screens
             }
 
             Player.Draw(spriteBatch);
+            
+
             spriteBatch.End();
 
             if (isDevToolsActive)
@@ -159,6 +163,18 @@ namespace Moonlight_Vale.Screens
                 font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 400), Color.White);
                 font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 450), Color.White);
 
+                /*--HitBox creation playground--*/
+                var _texture = new Texture2D(graphicsDevice, 1, 1);
+                _texture.SetData(new Color[] { new Color(100, 250, 100, 150) });
+
+                // Przekształć pozycję gracza z przestrzeni świata na ekran:
+                Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
+                Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
+
+                // Rysuj kwadrat na ekranie w odpowiednim miejscu
+                spriteBatch.Draw(_texture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, (int)(Player.SpriteWidth*Zoom*Player.Zoom), (int)((Player.SpriteHeight - (int)Player.HeadOffset) *Zoom*Player.Zoom)), Color.White);
+                /*-----*/
+                
                 spriteBatch.End();
             }
 
