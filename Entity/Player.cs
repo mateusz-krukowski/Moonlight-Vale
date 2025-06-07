@@ -1,8 +1,9 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Squared.Tiled;
 
@@ -24,8 +25,11 @@ namespace Moonlight_Vale.Entity
         private int currentRow;
         private bool ascending = true;
         private int selectedItem;
+        
+        public List<Item> Inventory { get; } = new List<Item>(30);
+        public List<Item> ActionBar { get; } = new List<Item>(10);
 
-        public Player(Vector2 startPosition, Map map)
+        public Player(Vector2 startPosition, Map map) //change to IMap inheritance instead of Tiled.Map
         {
             Position = startPosition;
             frame = 1;
@@ -51,7 +55,7 @@ namespace Moonlight_Vale.Entity
         public float LeftBorder { get; private set; }
         public float RightBorder { get; private set; }
 
-        public int SelectedItem
+        public int SelectedItem //from ActionBar
         {
             get => selectedItem;
             set => selectedItem = value < 10 && value >= 0 ? value : 0;
@@ -194,7 +198,7 @@ namespace Moonlight_Vale.Entity
             if (layer == null) return;
 
             int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            if (currentTileId > 0)
+            if (currentTileId is 12 or 1)
             {
                 layer.Tiles[(int)(tileIndex.Y * layer.Width + tileIndex.X)] = 12;
             }
@@ -213,7 +217,7 @@ namespace Moonlight_Vale.Entity
         {
             Vector2 tileIndex = GetTileIndex(borderPosition);
             int? tileId = map.Layers.Values[0].GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            return tileId is <= 12 or 114 or 115 or 116  or 98 or 99 or 100 or 101; //114 and 115 house entrance
+            return tileId is <= 12 or 114 or 115 or 116  or 98 or 99 or 100 or 101 or 102; //114 and 115 house entrance
         }
 
         private Vector2 GetTileIndex(Vector2 position)
@@ -223,17 +227,35 @@ namespace Moonlight_Vale.Entity
             return new Vector2(tileX, tileY);
         }
 
-        private Vector2 GetTargetTileIndex(Vector2 position, Vector2 direction)
+        public Vector2 GetTargetTileIndex(Vector2 position, Vector2 direction)
         {
-            Vector2 offset = Vector2.Zero;
-            if (direction.X > 0) offset = Vector2.UnitX;
-            else if (direction.X < 0) offset = -Vector2.UnitX;
-            else if (direction.Y > 0) offset = Vector2.UnitY;
-            else if (direction.Y < 0) offset = -Vector2.UnitY;
+            // Calculate player's center point
+            float playerCenterX = LeftBorder + (RightBorder - LeftBorder) / 2;
+            float playerCenterY = UpBorder + (DownBorder - UpBorder) / 2;
 
-            Vector2 currentTileIndex = GetTileIndex(position);
-            currentTileIndex.Y += 1;
-            return currentTileIndex + offset;
+            // Calculate target point based on direction
+            float targetX = playerCenterX;
+            float targetY = playerCenterY;
+
+            if (direction.X > 0) // Right
+            {
+                targetX = RightBorder + 1; // Just outside right border
+            }
+            else if (direction.X < 0) // Left
+            {
+                targetX = LeftBorder - 1; // Just outside left border
+            }
+            else if (direction.Y > 0) // Down
+            {
+                targetY = DownBorder + 1; // Just below bottom border
+            }
+            else if (direction.Y < 0) // Up
+            {
+                targetY = UpBorder - 1; // Just above top border
+            }
+
+            // Convert target point to tile index
+            return GetTileIndex(new Vector2(targetX, targetY));
         }
 
         private void UpdateAnimation(float deltaTime)

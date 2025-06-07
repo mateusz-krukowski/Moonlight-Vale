@@ -3,32 +3,24 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Squared.Tiled;
-using System.Linq;
 using FontStashSharp;
 using Myra.Graphics2D.UI;
 using Moonlight_Vale.Entity;
 using Moonlight_Vale.Screens.Maps;
 using Moonlight_Vale.Systems;
+using Squared.Tiled;
+using System.Linq;
 
 namespace Moonlight_Vale.Screens
 {
     public class OverworldScreen : GameScreen
     {
-        /*
-         TODO:
-            - Player ma swojego zooma i overworldscreen ma swojego, ujednolicic to
-            - Zrozumiec jak dziala translacja kamery
-            - przez offset glowy gracz moze stawiac klocki nad soba bo gra mysli ze to klocek nizej np dom moze zakryc
-         */
-        public Map Map { get; private set; } // From Squared.Tiled
-        public IMap CurrentMap { get; private set; } // Interface for map functionality
-        public Texture2D TileSet { get; private set; }
+        public IMap CurrentMap { get; private set; }
         public Player Player { get; private set; }
         public Camera2D Camera { get; private set; }
         public FontSystem FontSystem { get; private set; }
         public Desktop Desktop { get; private set; }
-        
+
         public float Zoom { get; private set; } = 2.0f;
 
         public bool isInGameMenuActive;
@@ -51,34 +43,25 @@ namespace Moonlight_Vale.Screens
 
         public override void Initialize()
         {
-            /*
-             *  if not new game:
-             *      Load saved game data
-             *  else:
-             *      Initialize new game data
-             */
-            
             TimeSystem.Instance.Start();
-            
             Camera = new Camera2D();
-
             HudManager = new HudManager(this);
             HudManager.Initialize();
-
             previousKeyboardState = Keyboard.GetState();
         }
 
         public override void LoadContent(ContentManager content)
         {
-            Map = Map.Load(content.RootDirectory + @"\Tilemaps\player_farm_reduced.tmx", content);
-            TileSet = Map.Tilesets.Values.First().Texture;
-            Player = new Player(new Vector2(129, 150), Map);
+            CurrentMap = new PlayerFarm(this); // lub inna mapa zgodnie z logiką gry
+            CurrentMap.LoadContent(content);
+
+            Player = new Player(new Vector2(129, 150), CurrentMap.TileMap);
             Player.LoadContent(content, @"Spritesheets\hero_spritesheet");
         }
 
         public void SaveGame() { }
         public void LoadGame() { }
-        public void OpenSettings() { }
+        public void OpenSettings() {HudManager.CreateSettingsWindow(); }
 
         public void ReturnToMenu()
         {
@@ -95,7 +78,6 @@ namespace Moonlight_Vale.Screens
         public override void Update(GameTime gameTime)
         {
             var keyboard = Keyboard.GetState();
-            var mouse = Mouse.GetState();
 
             Player.Update(gameTime, keyboard);
 
@@ -126,18 +108,16 @@ namespace Moonlight_Vale.Screens
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
             graphicsDevice.Clear(Color.Black);
-            if (Map == null) return;
+            if (CurrentMap?.TileMap == null) return;
 
             spriteBatch.Begin(transformMatrix: Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
 
-            foreach (var layer in Map.Layers.Values)
+            foreach (var layer in CurrentMap.TileMap.Layers.Values)
             {
                 DrawLayer(spriteBatch, layer);
             }
 
             Player.Draw(spriteBatch);
-            
-
             spriteBatch.End();
 
             if (isDevToolsActive)
@@ -146,12 +126,10 @@ namespace Moonlight_Vale.Screens
                 var font = FontSystem.GetFont(4);
 
                 font.DrawText(spriteBatch, $"Player position: {(int)Player.Position.X}, {(int)Player.Position.Y}", new Vector2(20, 50), Color.White);
-
                 Vector2? tileIndex = GetTileIndex(Player.Position);
                 font.DrawText(spriteBatch, $"Tile index: {tileIndex?.X}, {tileIndex?.Y}", new Vector2(20, 100), Color.White);
 
-                var layer = Map.Layers.Values[0];
-                Console.WriteLine(layer);
+                var layer = CurrentMap.TileMap.Layers.Values[0];
                 int? tileId = layer.GetTile((int)tileIndex?.X, (int)tileIndex?.Y);
                 font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
 
@@ -163,37 +141,64 @@ namespace Moonlight_Vale.Screens
                 font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 400), Color.White);
                 font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 450), Color.White);
 
-                /*--HitBox creation playground--*/
-                var _texture = new Texture2D(graphicsDevice, 1, 1);
-                _texture.SetData(new Color[] { new Color(100, 250, 100, 150) });
+                Action DrawHitbox = () =>
+                {
+                    var _texture = new Texture2D(graphicsDevice, 1, 1);
+                    _texture.SetData(new Color[] { new Color(100, 250, 100, 75) });
 
-                // Przekształć pozycję gracza z przestrzeni świata na ekran:
-                Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
-                Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
+                    Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
+                    Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
 
-                // Rysuj kwadrat na ekranie w odpowiednim miejscu
-                spriteBatch.Draw(_texture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, (int)(Player.SpriteWidth*Zoom*Player.Zoom), (int)((Player.SpriteHeight - (int)Player.HeadOffset) *Zoom*Player.Zoom)), Color.White);
-                /*-----*/
-                
+                    spriteBatch.Draw(_texture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y,
+                            (int)(Player.SpriteWidth * Zoom * Player.Zoom),
+                            (int)((Player.SpriteHeight - (int)Player.HeadOffset) * Zoom * Player.Zoom)),
+                        Color.White);
+                };
+
+                Action DrawTileToBeReplaced = () =>
+                {
+                    var keyboard = Keyboard.GetState();
+                    if (!keyboard.IsKeyDown(Keys.LeftControl))
+                        return;
+                    
+                    Vector2 tileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
+                    
+                    if (tileIndex.X < 0 || tileIndex.Y < 0)
+                        return;
+
+                    int tileSize = CurrentMap.TileMap.TileWidth;
+                    
+                    Vector2 tileWorldPos = tileIndex * tileSize *2;
+                    
+                    Vector2 screenPosition = Vector2.Transform(tileWorldPos, Camera.GetViewMatrix());
+                    
+                    var whiteTexture = new Texture2D(graphicsDevice, 1, 1);
+                    whiteTexture.SetData(new[] { new Color(200, 200, 200, 5) });
+                    
+                    int scaledSize = (int)(tileSize * Zoom * 2);
+                    spriteBatch.Draw(whiteTexture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, scaledSize, scaledSize), Color.White);
+                };
+                    
+                DrawHitbox();
+                DrawTileToBeReplaced();
                 spriteBatch.End();
             }
 
             HudManager.Draw();
         }
 
-        private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
+        private void DrawLayer(SpriteBatch spriteBatch, Layer layer) //IMAP classes should do that!!!!
         {
-            int scaledTileSize = (int)(Map.TileWidth * Zoom);
+            int scaledTileSize = (int)(CurrentMap.TileMap.TileWidth * Zoom);
 
             for (int y = 0; y < layer.Height; y++)
             for (int x = 0; x < layer.Width; x++)
             {
                 int tileIndex = layer.GetTile(x, y);
-
                 var tileRect = new Rectangle();
-                if (!Map.Tilesets.First().Value.MapTileToRect(tileIndex, ref tileRect)) continue;
+                if (!CurrentMap.TileMap.Tilesets.First().Value.MapTileToRect(tileIndex, ref tileRect)) continue;
 
-                spriteBatch.Draw(TileSet, new Vector2(x, y) * scaledTileSize, tileRect, Color.White, 0, Vector2.Zero, Zoom, SpriteEffects.None, 0);
+                spriteBatch.Draw(CurrentMap.TileSet, new Vector2(x, y) * scaledTileSize, tileRect, Color.White, 0, Vector2.Zero, Zoom, SpriteEffects.None, 0);
             }
         }
 
@@ -205,13 +210,12 @@ namespace Moonlight_Vale.Screens
 
         private Vector2 GetTileIndex(Vector2 position)
         {
-            int tileX = (int)(position.X / (Map.TileWidth * Zoom));
-            int tileY = (int)(position.Y / (Map.TileHeight * Zoom));
+            int tileX = (int)(position.X / (CurrentMap.TileMap.TileWidth * Zoom));
+            int tileY = (int)(position.Y / (CurrentMap.TileMap.TileHeight * Zoom));
             return new Vector2(tileX, tileY);
         }
     }
-    
-    // Camera2D helper class to handle camera transformations
+
     public class Camera2D
     {
         public Vector2 Position { get; set; }

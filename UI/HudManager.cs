@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using FontStashSharp;
 using FontStashSharp.RichText;
 using Microsoft.Xna.Framework;
@@ -18,6 +17,7 @@ public class HudManager
     private Grid hud;
     private HorizontalStackPanel itemBar;
     private VerticalStackPanel inGameMenu;
+    private Window settingsWindow;
 
     public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
     public Desktop Desktop => overworldScreen.Desktop;
@@ -168,7 +168,7 @@ public class HudManager
         menu.Widgets.Add(CreateButton("Return to Game", () => overworldScreen.isInGameMenuActive = false));
         menu.Widgets.Add(CreateButton("Save Game", overworldScreen.SaveGame));
         menu.Widgets.Add(CreateButton("Load Game", overworldScreen.LoadGame));
-        menu.Widgets.Add(CreateButton("Settings", overworldScreen.OpenSettings));
+        menu.Widgets.Add(CreateButton("Settings", ToggleSettingsWindow));
         menu.Widgets.Add(CreateButton("Return to Menu", overworldScreen.ReturnToMenu));
         menu.Widgets.Add(CreateButton("Exit Game", overworldScreen.ExitGame));
 
@@ -201,4 +201,42 @@ public class HudManager
         return null;
         //pora na CS'a
     }
+
+    public Window CreateSettingsWindow()
+    {
+        if (settingsWindow == null)
+        {
+            settingsWindow = new Window
+            {
+                Title = "Settings",
+                Width = 400,
+                Height = 300,
+                Background = new SolidBrush(new Color(50, 50, 50)),
+                Padding = new Thickness(10),
+                HorizontalAlignment = 0,
+                VerticalAlignment = 0
+
+            };
+            
+            settingsWindow.Closed += (s, e) => settingsWindow = null;
+            Desktop.Widgets.Add(settingsWindow);
+        }
+        
+        settingsWindow.Visible = true;
+
+        return settingsWindow; 
+    }
+    
+    public void ToggleSettingsWindow()
+    {
+        if (settingsWindow == null)
+        {
+            CreateSettingsWindow();
+        }
+        else
+        {
+            settingsWindow.Visible = !settingsWindow.Visible;
+        }
+    }
+
 }
