@@ -49,6 +49,9 @@
 #begin Tilemaps/player_farm_reduced.tmx
 /copy:Tilemaps/player_farm_reduced.tmx
 
+#begin Tilemaps/player_house.tmx
+/copy:Tilemaps/player_house.tmx
+
 #begin Tilesets/farm_reduced.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -60,4 +63,16 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Tilesets/farm_reduced.png
+
+#begin Tilesets/house_interior.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Tilesets/house_interior.png
 

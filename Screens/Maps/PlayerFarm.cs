@@ -12,17 +12,26 @@ namespace Moonlight_Vale.Screens.Maps
         public Map TileMap { get; private set; }
         public string PathToTileMap => @"\Tilemaps\player_farm_reduced.tmx";
         public HashSet<int> PasableTileIds { get; set; }
-        public (int, int) PlayerSpawnPoint { get; set; }
+        public Vector2 PlayerSpawnPoint { get; set; }
         public List<(int, int)> Portals { get; set; }
         public OverworldScreen OverworldScreen { get; }
 
         private Texture2D TileSet => TileMap.Tilesets.Values.First().Texture;
-        
-        
 
         public PlayerFarm(OverworldScreen overworldScreen)
         {
             OverworldScreen = overworldScreen;
+            PlayerSpawnPoint = new Vector2(129, 100); // Example spawn point, adjust as needed
+            PasableTileIds = new HashSet<int>
+            {
+                1, //grass
+                12, //dirt
+                114,115,116, //stairs
+                98,99,100,101,102, //house porch
+                34,36,38,40 //cliff shadows
+                
+            }; 
+
         }
 
         public void LoadContent(ContentManager content)

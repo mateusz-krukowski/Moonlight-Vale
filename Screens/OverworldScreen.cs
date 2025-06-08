@@ -52,16 +52,16 @@ namespace Moonlight_Vale.Screens
 
         public override void LoadContent(ContentManager content)
         {
-            CurrentMap = new PlayerFarm(this); // lub inna mapa zgodnie z logiką gry
+            CurrentMap = new PlayerFarm(this);
             CurrentMap.LoadContent(content);
 
-            Player = new Player(new Vector2(129, 150), CurrentMap.TileMap);
+            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap);
             Player.LoadContent(content, @"Spritesheets\hero_spritesheet");
         }
 
         public void SaveGame() { }
         public void LoadGame() { }
-        public void OpenSettings() {HudManager.CreateSettingsWindow(); }
+        public void OpenSettings() { HudManager.CreateSettingsWindow(); }
 
         public void ReturnToMenu()
         {
@@ -102,6 +102,22 @@ namespace Moonlight_Vale.Screens
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
 
+            
+            
+            // Handle entering to house
+            Vector2 tileIndex = GetTileIndex(Player.Position);
+            var layer = CurrentMap.TileMap.Layers.Values[0];
+            int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+            if (tileId == 83)
+            {
+                if (keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                {
+                    CurrentMap = new PlayerHouse(this);
+                    CurrentMap.LoadContent(game.Content);
+                    Player.Position = CurrentMap.PlayerSpawnPoint;
+                }
+            }
+            
             previousKeyboardState = keyboard;
         }
 
@@ -126,11 +142,11 @@ namespace Moonlight_Vale.Screens
                 var font = FontSystem.GetFont(4);
 
                 font.DrawText(spriteBatch, $"Player position: {(int)Player.Position.X}, {(int)Player.Position.Y}", new Vector2(20, 50), Color.White);
-                Vector2? tileIndex = GetTileIndex(Player.Position);
-                font.DrawText(spriteBatch, $"Tile index: {tileIndex?.X}, {tileIndex?.Y}", new Vector2(20, 100), Color.White);
+                Vector2 tileIndex = GetTileIndex(Player.Position);
+                font.DrawText(spriteBatch, $"Tile index: {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
 
                 var layer = CurrentMap.TileMap.Layers.Values[0];
-                int? tileId = layer.GetTile((int)tileIndex?.X, (int)tileIndex?.Y);
+                int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
                 font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
 
                 font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
@@ -161,14 +177,14 @@ namespace Moonlight_Vale.Screens
                     if (!keyboard.IsKeyDown(Keys.LeftControl))
                         return;
                     
-                    Vector2 tileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
+                    Vector2 targetTileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
                     
-                    if (tileIndex.X < 0 || tileIndex.Y < 0)
+                    if (targetTileIndex.X < 0 || targetTileIndex.Y < 0)
                         return;
 
                     int tileSize = CurrentMap.TileMap.TileWidth;
                     
-                    Vector2 tileWorldPos = tileIndex * tileSize *2;
+                    Vector2 tileWorldPos = targetTileIndex * tileSize * 2;
                     
                     Vector2 screenPosition = Vector2.Transform(tileWorldPos, Camera.GetViewMatrix());
                     
@@ -187,7 +203,7 @@ namespace Moonlight_Vale.Screens
             HudManager.Draw();
         }
 
-        private void DrawLayer(SpriteBatch spriteBatch, Layer layer) //IMAP classes should do that!!!!
+        private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
         {
             int scaledTileSize = (int)(CurrentMap.TileMap.TileWidth * Zoom);
 
@@ -208,7 +224,7 @@ namespace Moonlight_Vale.Screens
             Desktop.Root = null;
         }
 
-        private Vector2 GetTileIndex(Vector2 position)
+        public Vector2 GetTileIndex(Vector2 position)
         {
             int tileX = (int)(position.X / (CurrentMap.TileMap.TileWidth * Zoom));
             int tileY = (int)(position.Y / (CurrentMap.TileMap.TileHeight * Zoom));

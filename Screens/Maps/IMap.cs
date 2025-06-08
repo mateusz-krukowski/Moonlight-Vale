@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Tiled;
 
@@ -11,7 +12,7 @@ public interface IMap
     public Map TileMap { get; }
     public String PathToTileMap { get;  }
     public HashSet<int> PasableTileIds { get; set; }
-    public ValueTuple<int,int> PlayerSpawnPoint { get; set; }
+    public Vector2 PlayerSpawnPoint { get; set; }
     public List<ValueTuple<int,int>> Portals { get; set; }
     public Texture2D TileSet => TileMap.Tilesets.Values.First().Texture;
     public OverworldScreen OverworldScreen { get; }

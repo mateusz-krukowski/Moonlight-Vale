@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
+using Moonlight_Vale.Screens.Maps;
 using Squared.Tiled;
 
 namespace Moonlight_Vale.Entity
@@ -19,7 +20,7 @@ namespace Moonlight_Vale.Entity
 
         private Texture2D spriteSheet;
         private SpriteEffects spriteEffect;
-        private Map map;
+        private IMap map;
         private int frame;
         private float animationTimer;
         private int currentRow;
@@ -29,7 +30,7 @@ namespace Moonlight_Vale.Entity
         public List<Item> Inventory { get; } = new List<Item>(30);
         public List<Item> ActionBar { get; } = new List<Item>(10);
 
-        public Player(Vector2 startPosition, Map map) //change to IMap inheritance instead of Tiled.Map
+        public Player(Vector2 startPosition, IMap map)
         {
             Position = startPosition;
             frame = 1;
@@ -55,7 +56,7 @@ namespace Moonlight_Vale.Entity
         public float LeftBorder { get; private set; }
         public float RightBorder { get; private set; }
 
-        public int SelectedItem //from ActionBar
+        public int SelectedItem
         {
             get => selectedItem;
             set => selectedItem = value < 10 && value >= 0 ? value : 0;
@@ -194,7 +195,7 @@ namespace Moonlight_Vale.Entity
                 return;
             }
 
-            var layer = map.Layers.Values[0];
+            var layer = map.TileMap.Layers.Values[0];
             if (layer == null) return;
 
             int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
@@ -216,14 +217,27 @@ namespace Moonlight_Vale.Entity
         private bool CanMoveToTile(Vector2 borderPosition)
         {
             Vector2 tileIndex = GetTileIndex(borderPosition);
-            int? tileId = map.Layers.Values[0].GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            return tileId is <= 12 or 114 or 115 or 116  or 98 or 99 or 100 or 101 or 102; //114 and 115 house entrance
+            
+            // Użyj map.TileMap do pobrania warstwy
+            int? tileId = map.TileMap.Layers.Values[0].GetTile((int)tileIndex.X, (int)tileIndex.Y);
+            
+            // Użyj map.PasableTileIds do sprawdzenia możliwości ruchu
+            return tileId.HasValue && map.PasableTileIds.Contains(tileId.Value);
+        }
+
+        // Nowa metoda do pobierania aktualnego kafelka gracza
+        public Vector2 GetCurrentTileIndex()
+        {
+            // Użyj środka gracza do określenia kafelka
+            float centerX = LeftBorder + (RightBorder - LeftBorder) / 2;
+            float centerY = UpBorder + (DownBorder - UpBorder) / 2;
+            return GetTileIndex(new Vector2(centerX, centerY));
         }
 
         private Vector2 GetTileIndex(Vector2 position)
         {
-            int tileX = (int)(position.X / (map.TileWidth * Zoom));
-            int tileY = (int)(position.Y / (map.TileHeight * Zoom));
+            int tileX = (int)(position.X / (map.TileMap.TileWidth * Zoom));
+            int tileY = (int)(position.Y / (map.TileMap.TileHeight * Zoom));
             return new Vector2(tileX, tileY);
         }
 
