@@ -31,6 +31,9 @@ namespace Moonlight_Vale.Screens
 
         public HudManager HudManager { get; private set; }
 
+        // Blokada klawisza E po przejściu
+        private bool eKeyBlocked = false;
+
         public OverworldScreen(MoonlightVale game, ScreenManager manager, SpriteBatch batch, Desktop desktop)
             : base(game, manager, batch, desktop)
         {
@@ -79,11 +82,17 @@ namespace Moonlight_Vale.Screens
         {
             var keyboard = Keyboard.GetState();
 
-            Player.Update(gameTime, keyboard);
+            // Sprawdź czy klawisz E został puszczony
+            if (eKeyBlocked && !keyboard.IsKeyDown(Keys.E))
+            {
+                eKeyBlocked = false;
+            }
 
             Camera.Zoom = Zoom;
             Player.Zoom = Zoom;
-            Player.Speed = Player.Zoom * 50.0f;
+            Player.Speed = 120f;
+
+            Player.Update(gameTime, keyboard);
 
             Camera.Position = Player.Position - new Vector2(1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
                                                             1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f);
@@ -101,24 +110,76 @@ namespace Moonlight_Vale.Screens
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
-
             
-            
-            // Handle entering to house
-            Vector2 tileIndex = GetTileIndex(Player.Position);
-            var layer = CurrentMap.TileMap.Layers.Values[0];
-            int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            if (tileId == 83)
+            // Sprawdź przejścia tylko jeśli klawisz E nie jest zablokowany
+            if (!eKeyBlocked)
             {
-                if (keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+                HandleMapTransitions(keyboard);
+                
+                // Check for PlayerHouse specific transitions
+                if (CurrentMap is PlayerHouse playerHouse)
                 {
-                    CurrentMap = new PlayerHouse(this);
-                    CurrentMap.LoadContent(game.Content);
-                    Player.Position = CurrentMap.PlayerSpawnPoint;
+                    if (CanUseEKey(keyboard))
+                    {
+                        playerHouse.CheckForExitTransition(keyboard, previousKeyboardState);
+                    }
                 }
             }
             
             previousKeyboardState = keyboard;
+        }
+
+        private bool CanUseEKey(KeyboardState keyboard)
+        {
+            return !eKeyBlocked && keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E);
+        }
+
+        private void HandleMapTransitions(KeyboardState keyboard)
+        {
+            if (CurrentMap?.TileMap?.Layers == null || CurrentMap.TileMap.Layers.Count == 0)
+                return;
+
+            Vector2 tileIndex = GetTileIndex(Player.Position);
+            var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
+            
+            if (layer == null || tileIndex.X < 0 || tileIndex.Y < 0 || 
+                tileIndex.X >= layer.Width || tileIndex.Y >= layer.Height)
+                return;
+
+            int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+            
+            if (tileId == 83)
+            {
+                if (CanUseEKey(keyboard))
+                {
+                    SwitchToHouse();
+                }
+            }
+            else if (CurrentMap is PlayerHouse && (tileId == 168 || tileId == 169))
+            {
+                if (CanUseEKey(keyboard))
+                {
+                    SwitchToFarm();
+                }
+            }
+        }
+
+        public void SwitchToHouse()
+        {
+            CurrentMap = new PlayerHouse(this);
+            Player.Map = CurrentMap;
+            CurrentMap.LoadContent(game.Content);
+            Player.Position = CurrentMap.PlayerSpawnPoint;
+            eKeyBlocked = true; // Zablokuj klawisz E
+        }
+        
+        public void SwitchToFarm()
+        {
+            CurrentMap = new PlayerFarm(this);
+            Player.Map = CurrentMap;
+            CurrentMap.LoadContent(game.Content);
+            Player.Position = new Vector2(550,520);
+            eKeyBlocked = true; // Zablokuj klawisz E
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -138,73 +199,90 @@ namespace Moonlight_Vale.Screens
 
             if (isDevToolsActive)
             {
-                spriteBatch.Begin();
-                var font = FontSystem.GetFont(4);
-
-                font.DrawText(spriteBatch, $"Player position: {(int)Player.Position.X}, {(int)Player.Position.Y}", new Vector2(20, 50), Color.White);
-                Vector2 tileIndex = GetTileIndex(Player.Position);
-                font.DrawText(spriteBatch, $"Tile index: {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
-
-                var layer = CurrentMap.TileMap.Layers.Values[0];
-                int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-                font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
-
-                font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
-                font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}", new Vector2(20, 250), Color.White);
-
-                font.DrawText(spriteBatch, $"UpBorder: {(int)Player.UpBorder}", new Vector2(20, 300), Color.White);
-                font.DrawText(spriteBatch, $"DownBorder: {(int)Player.DownBorder}", new Vector2(20, 350), Color.White);
-                font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 400), Color.White);
-                font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 450), Color.White);
-
-                Action DrawHitbox = () =>
-                {
-                    var _texture = new Texture2D(graphicsDevice, 1, 1);
-                    _texture.SetData(new Color[] { new Color(100, 250, 100, 75) });
-
-                    Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
-                    Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
-
-                    spriteBatch.Draw(_texture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y,
-                            (int)(Player.SpriteWidth * Zoom * Player.Zoom),
-                            (int)((Player.SpriteHeight - (int)Player.HeadOffset) * Zoom * Player.Zoom)),
-                        Color.White);
-                };
-
-                Action DrawTileToBeReplaced = () =>
-                {
-                    var keyboard = Keyboard.GetState();
-                    if (!keyboard.IsKeyDown(Keys.LeftControl))
-                        return;
-                    
-                    Vector2 targetTileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
-                    
-                    if (targetTileIndex.X < 0 || targetTileIndex.Y < 0)
-                        return;
-
-                    int tileSize = CurrentMap.TileMap.TileWidth;
-                    
-                    Vector2 tileWorldPos = targetTileIndex * tileSize * 2;
-                    
-                    Vector2 screenPosition = Vector2.Transform(tileWorldPos, Camera.GetViewMatrix());
-                    
-                    var whiteTexture = new Texture2D(graphicsDevice, 1, 1);
-                    whiteTexture.SetData(new[] { new Color(200, 200, 200, 5) });
-                    
-                    int scaledSize = (int)(tileSize * Zoom * 2);
-                    spriteBatch.Draw(whiteTexture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, scaledSize, scaledSize), Color.White);
-                };
-                    
-                DrawHitbox();
-                DrawTileToBeReplaced();
-                spriteBatch.End();
+                DrawDebugInfo(spriteBatch);
             }
 
             HudManager.Draw();
         }
 
+        private void DrawDebugInfo(SpriteBatch spriteBatch)
+        {
+            spriteBatch.Begin();
+            var font = FontSystem.GetFont(4);
+
+            font.DrawText(spriteBatch, $"Player position: {(int)Player.Position.X}, {(int)Player.Position.Y}", new Vector2(20, 50), Color.White);
+            
+            if (CurrentMap?.TileMap != null)
+            {
+                Vector2 tileIndex = GetTileIndex(Player.Position);
+                font.DrawText(spriteBatch, $"Tile index: {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
+
+                var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
+                if (layer != null && tileIndex.X >= 0 && tileIndex.Y >= 0 && 
+                    tileIndex.X < layer.Width && tileIndex.Y < layer.Height)
+                {
+                    int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+                    font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
+                }
+            }
+
+            font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
+            font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}", new Vector2(20, 250), Color.White);
+            font.DrawText(spriteBatch, $"Current Map: {CurrentMap?.GetType().Name}", new Vector2(20, 300), Color.White);
+            font.DrawText(spriteBatch, $"E Key Blocked: {eKeyBlocked}", new Vector2(20, 320), Color.Yellow);
+
+            font.DrawText(spriteBatch, $"UpBorder: {(int)Player.UpBorder}", new Vector2(20, 350), Color.White);
+            font.DrawText(spriteBatch, $"DownBorder: {(int)Player.DownBorder}", new Vector2(20, 400), Color.White);
+            font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 450), Color.White);
+            font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 500), Color.White);
+
+            DrawPlayerHitbox(spriteBatch);
+            DrawTargetTile(spriteBatch);
+            
+            spriteBatch.End();
+        }
+
+        private void DrawPlayerHitbox(SpriteBatch spriteBatch)
+        {
+            var _texture = new Texture2D(graphicsDevice, 1, 1);
+            _texture.SetData(new Color[] { new Color(100, 250, 100, 75) });
+
+            Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
+            Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
+
+            spriteBatch.Draw(_texture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y,
+                    (int)(Player.SpriteWidth * Zoom * Player.Zoom),
+                    (int)((Player.SpriteHeight - (int)Player.HeadOffset) * Zoom * Player.Zoom)),
+                Color.White);
+        }
+
+        private void DrawTargetTile(SpriteBatch spriteBatch)
+        {
+            var keyboard = Keyboard.GetState();
+            if (!keyboard.IsKeyDown(Keys.LeftControl) || CurrentMap?.TileMap == null)
+                return;
+            
+            Vector2 targetTileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
+            
+            if (targetTileIndex.X < 0 || targetTileIndex.Y < 0)
+                return;
+
+            int tileSize = CurrentMap.TileMap.TileWidth;
+            Vector2 tileWorldPos = targetTileIndex * tileSize * 2;
+            Vector2 screenPosition = Vector2.Transform(tileWorldPos, Camera.GetViewMatrix());
+            
+            var whiteTexture = new Texture2D(graphicsDevice, 1, 1);
+            whiteTexture.SetData(new[] { new Color(200, 200, 200, 5) });
+            
+            int scaledSize = (int)(tileSize * Zoom * 2);
+            spriteBatch.Draw(whiteTexture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, scaledSize, scaledSize), Color.White);
+        }
+
         private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
         {
+            if (CurrentMap?.TileMap?.Tilesets == null || !CurrentMap.TileMap.Tilesets.Any())
+                return;
+
             int scaledTileSize = (int)(CurrentMap.TileMap.TileWidth * Zoom);
 
             for (int y = 0; y < layer.Height; y++)
@@ -226,6 +304,9 @@ namespace Moonlight_Vale.Screens
 
         public Vector2 GetTileIndex(Vector2 position)
         {
+            if (CurrentMap?.TileMap == null)
+                return Vector2.Zero;
+
             int tileX = (int)(position.X / (CurrentMap.TileMap.TileWidth * Zoom));
             int tileY = (int)(position.Y / (CurrentMap.TileMap.TileHeight * Zoom));
             return new Vector2(tileX, tileY);

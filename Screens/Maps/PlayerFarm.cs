@@ -16,12 +16,12 @@ namespace Moonlight_Vale.Screens.Maps
         public List<(int, int)> Portals { get; set; }
         public OverworldScreen OverworldScreen { get; }
 
-        private Texture2D TileSet => TileMap.Tilesets.Values.First().Texture;
+        public Texture2D TileSet => TileMap.Tilesets.Values.First().Texture;
 
         public PlayerFarm(OverworldScreen overworldScreen)
         {
             OverworldScreen = overworldScreen;
-            PlayerSpawnPoint = new Vector2(129, 100); // Example spawn point, adjust as needed
+            PlayerSpawnPoint = new Vector2(950,700); // Example spawn point, adjust as needed
             PasableTileIds = new HashSet<int>
             {
                 1, //grass
