@@ -20,6 +20,8 @@ namespace Moonlight_Vale.Entity
         private const float SPRINT_MULTIPLIER = 1.8f;
         private const float ANIMATION_SPEED = 0.18f;
 
+        private float _energy = 100f;
+
         private Texture2D spriteSheet;
 
         public SpriteEffects SpriteEffect { get; private set; } = SpriteEffects.None;
@@ -52,6 +54,16 @@ namespace Moonlight_Vale.Entity
         public int SpriteHeight => SPRITE_HEIGHT;
         public float HeadOffset => HEAD_OFFSET;
         public float AnimationSpeed => ANIMATION_SPEED;
+
+        public float Energy
+        {
+            get { return _energy; }
+            set
+            {
+                if (value >= 0 && value <= 100)
+                    _energy = value;
+            }
+        }
 
         public Player(Vector2 startPosition, IMap map)
         {
