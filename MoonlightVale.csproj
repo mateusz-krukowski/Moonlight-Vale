@@ -9,14 +9,14 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <ApplicationIcon>$(MSBuildProjectDirectory)\source\Content\Icons\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Icon.ico">
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)\source\Content\Icons\Icon.ico">
       <LogicalName>Icon.ico</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="Icon.bmp">
+    <EmbeddedResource Include="$(MSBuildProjectDirectory)\source\Content\Icons\Icon.bmp">
       <LogicalName>Icon.bmp</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
@@ -29,8 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Content\Content.mgcb" />
-    <Resource Include="Content\Content.mgcb" />
+    <None Remove="$(MSBuildProjectDirectory)\source\Content\Content.mgcb" />
+    <Resource Include="$(MSBuildProjectDirectory)\source\Content\Content.mgcb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="$(MSBuildProjectDirectory)\source\Content\Icons\" />
   </ItemGroup>
   
 </Project>
