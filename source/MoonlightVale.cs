@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using System.IO;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Myra;
 using Myra.Graphics2D.UI;
@@ -32,7 +34,8 @@ namespace Moonlight_Vale
         public MoonlightVale()
         {
             _graphics = new GraphicsDeviceManager(this);
-            Content.RootDirectory = "Content";
+            Content.RootDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content");
+            Console.WriteLine(Content.RootDirectory);
         }
 
         protected override void Initialize()
@@ -57,7 +60,8 @@ namespace Moonlight_Vale
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _fontSystem = new FontSystem();
-            _fontSystem.AddFont(System.IO.File.ReadAllBytes(Content.RootDirectory + @"\Fonts\CelticBitRegular.ttf"));
+            string fontPath = Path.Combine( Content.RootDirectory, "Fonts", "CelticBitRegular.ttf");
+            _fontSystem.AddFont(System.IO.File.ReadAllBytes(fontPath));
         }
 
         protected override void Update(GameTime gameTime)
@@ -72,5 +76,4 @@ namespace Moonlight_Vale
             base.Draw(gameTime);
         }
     }
-
 }

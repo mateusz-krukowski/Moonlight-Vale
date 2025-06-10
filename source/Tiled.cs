@@ -149,16 +149,16 @@ namespace Squared.Tiled
                                 currentTileId = int.Parse(reader.GetAttribute("id"));
                                 break;
                             case "property":
+                            {
+                                TilePropertyList props;
+                                if (!result.TileProperties.TryGetValue(currentTileId, out props))
                                 {
-                                    TilePropertyList props;
-                                    if (!result.TileProperties.TryGetValue(currentTileId, out props))
-                                    {
-                                        props = new TilePropertyList();
-                                        result.TileProperties[currentTileId] = props;
-                                    }
-
-                                    props[reader.GetAttribute("name")] = reader.GetAttribute("value");
+                                    props = new TilePropertyList();
+                                    result.TileProperties[currentTileId] = props;
                                 }
+
+                                props[reader.GetAttribute("name")] = reader.GetAttribute("value");
+                            }
                                 break;
                         }
 
@@ -283,164 +283,135 @@ namespace Squared.Tiled
                         switch (name)
                         {
                             case "data":
+                            {
+                                if (reader.GetAttribute("encoding") != null)
                                 {
-                                    if (reader.GetAttribute("encoding") != null)
+                                    var encoding = reader.GetAttribute("encoding");
+                                    var compressor = reader.GetAttribute("compression");
+                                    switch (encoding)
                                     {
-                                        var encoding = reader.GetAttribute("encoding");
-                                        var compressor = reader.GetAttribute("compression");
-                                        switch (encoding)
-                                        {
-                                            case "csv":
-                                                string csvdata = "";
-                                                if (reader.Value!=null)
+                                        case "csv":
+                                            string csvdata = "";
+                                            if (reader.Value!=null)
+                                            {
+                                                csvdata = (string)reader.ReadInnerXml();
+                                                int total = result.Tiles.Length;
+                                                var dump = csvdata.Split(',');
+                                                uint tileData;
+
+                                                for (int i = 0; i < total; i++)
                                                 {
-                                                    csvdata = (string)reader.ReadInnerXml();
-                                                    int total = result.Tiles.Length;
-                                                    var dump = csvdata.Split(',');
-                                                    uint tileData;
-
-                                                    for (int i = 0; i < total; i++)
+                                                    if (dump[i] != null)
                                                     {
-                                                        if (dump[i] != null)
+                                                        tileData = Convert.ToUInt32(int.Parse(dump[i]));
+                                                        byte flipAndRotateFlags = 0;
+                                                        if ((tileData & FlippedHorizontallyFlag) != 0)
                                                         {
-                                                            tileData = Convert.ToUInt32(int.Parse(dump[i]));
-                                                            byte flipAndRotateFlags = 0;
-                                                            if ((tileData & FlippedHorizontallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= HorizontalFlipDrawFlag;
-                                                            }
-                                                            if ((tileData & FlippedVerticallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= VerticalFlipDrawFlag;
-                                                            }
-                                                            if ((tileData & FlippedDiagonallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= DiagonallyFlipDrawFlag;
-                                                            }
-                                                            result.FlipAndRotate[i] = flipAndRotateFlags;
-
-                                                            // Clear the flip bits before storing the tile data
-                                                            tileData &= ~(FlippedHorizontallyFlag |
-                                                                          FlippedVerticallyFlag |
-                                                                          FlippedDiagonallyFlag);
-                                                            result.Tiles[i] = (int)tileData;
+                                                            flipAndRotateFlags |= HorizontalFlipDrawFlag;
                                                         }
-                                                        else
-                                                            result.Tiles[i] = 0;
+                                                        if ((tileData & FlippedVerticallyFlag) != 0)
+                                                        {
+                                                            flipAndRotateFlags |= VerticalFlipDrawFlag;
+                                                        }
+                                                        if ((tileData & FlippedDiagonallyFlag) != 0)
+                                                        {
+                                                            flipAndRotateFlags |= DiagonallyFlipDrawFlag;
+                                                        }
+                                                        result.FlipAndRotate[i] = flipAndRotateFlags;
+
+                                                        // Clear the flip bits before storing the tile data
+                                                        tileData &= ~(FlippedHorizontallyFlag |
+                                                                      FlippedVerticallyFlag |
+                                                                      FlippedDiagonallyFlag);
+                                                        result.Tiles[i] = (int)tileData;
                                                     }
+                                                    else
+                                                        result.Tiles[i] = 0;
+                                                }
 
                                                     
-                                                }
-                                                else
-                                                    Console.WriteLine("no value");
-                                                break;
-                                            case "base64":
-                                                {
-                                                    int dataSize = (result.Width * result.Height * 4) + 1024;
-                                                    var buffer = new byte[dataSize];
-                                                    reader.ReadElementContentAsBase64(buffer, 0, dataSize);
-
-                                                    Stream stream = new MemoryStream(buffer, true);
-
-                                                    if (compressor == "gzip")
-                                                        stream = new GZipStream(stream, CompressionMode.Decompress, false);
-                                                    else if (compressor == "zlib")
-                                                    {                                                       
-                                                        var length = buffer.Length - 6;
-                                                        byte[] data = new byte[length];
-                                                        Array.Copy(buffer, 2, data, 0, length);
-                                                        var compressedstream = new MemoryStream(data, false);
-                                                        stream = new DeflateStream(compressedstream, CompressionMode.Decompress);
-                                                    }
-
-                                                    using (stream)
-                                                    using (var br = new BinaryReader(stream))
-                                                    {
-                                                        for (int i = 0; i < result.Tiles.Length; i++)
-                                                        {
-                                                            uint tileData = (uint)br.ReadUInt32();
-                                                            // The data contain flip information as well as the tileset index
-                                                            byte flipAndRotateFlags = 0;
-                                                            if ((tileData & FlippedHorizontallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= HorizontalFlipDrawFlag;
-                                                            }
-                                                            if ((tileData & FlippedVerticallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= VerticalFlipDrawFlag;
-                                                            }
-                                                            if ((tileData & FlippedDiagonallyFlag) != 0)
-                                                            {
-                                                                flipAndRotateFlags |= DiagonallyFlipDrawFlag;
-                                                            }
-                                                            result.FlipAndRotate[i] = flipAndRotateFlags;
-
-                                                            // Clear the flip bits before storing the tile data
-                                                            tileData &= ~(FlippedHorizontallyFlag |
-                                                                          FlippedVerticallyFlag |
-                                                                          FlippedDiagonallyFlag);
-                                                            result.Tiles[i] = (int)tileData;
-                                                        }
-                                                    }
-
-                                                    continue;
-                                                };
-
-                                            default:
-                                                throw new Exception("Unrecognized encoding.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        using (var st = reader.ReadSubtree())
-                                        {
-                                            int i = 0;
-                                            while (!st.EOF)
-                                            {
-                                                switch (st.NodeType)
-                                                {
-                                                    case XmlNodeType.Element:
-                                                        if (st.Name == "tile")
-                                                        {
-                                                            
-                                                            if (i < result.Tiles.Length)
-                                                            {
-                                                                if (st.AttributeCount > 0)
-                                                                {
-                                                                    result.Tiles[i] = int.Parse(st.GetAttribute("gid"));
-                                                                }
-                                                                else result.Tiles[i] = 0;
-
-                                                                i++;
-                                                            }
-                                                        }
-
-                                                        break;
-                                                    case XmlNodeType.EndElement:
-                                                        break;
-                                                }
-
-                                                st.Read();
                                             }
-                                        }
+                                            else
+                                                Console.WriteLine("no value");
+                                            break;
+                                        case "base64":
+                                        {
+                                            int dataSize = (result.Width * result.Height * 4) + 1024;
+                                            var buffer = new byte[dataSize];
+                                            reader.ReadElementContentAsBase64(buffer, 0, dataSize);
+
+                                            Stream stream = new MemoryStream(buffer, true);
+
+                                            if (compressor == "gzip")
+                                                stream = new GZipStream(stream, CompressionMode.Decompress, false);
+                                            else if (compressor == "zlib")
+                                            {                                                       
+                                                var length = buffer.Length - 6;
+                                                byte[] data = new byte[length];
+                                                Array.Copy(buffer, 2, data, 0, length);
+                                                var compressedstream = new MemoryStream(data, false);
+                                                stream = new DeflateStream(compressedstream, CompressionMode.Decompress);
+                                            }
+
+                                            using (stream)
+                                            using (var br = new BinaryReader(stream))
+                                            {
+                                                for (int i = 0; i < result.Tiles.Length; i++)
+                                                {
+                                                    uint tileData = (uint)br.ReadUInt32();
+                                                    // The data contain flip information as well as the tileset index
+                                                    byte flipAndRotateFlags = 0;
+                                                    if ((tileData & FlippedHorizontallyFlag) != 0)
+                                                    {
+                                                        flipAndRotateFlags |= HorizontalFlipDrawFlag;
+                                                    }
+                                                    if ((tileData & FlippedVerticallyFlag) != 0)
+                                                    {
+                                                        flipAndRotateFlags |= VerticalFlipDrawFlag;
+                                                    }
+                                                    if ((tileData & FlippedDiagonallyFlag) != 0)
+                                                    {
+                                                        flipAndRotateFlags |= DiagonallyFlipDrawFlag;
+                                                    }
+                                                    result.FlipAndRotate[i] = flipAndRotateFlags;
+
+                                                    // Clear the flip bits before storing the tile data
+                                                    tileData &= ~(FlippedHorizontallyFlag |
+                                                                  FlippedVerticallyFlag |
+                                                                  FlippedDiagonallyFlag);
+                                                    result.Tiles[i] = (int)tileData;
+                                                }
+                                            }
+
+                                            continue;
+                                        };
+
+                                        default:
+                                            throw new Exception("Unrecognized encoding.");
                                     }
-                                    Console.WriteLine("It made it!");
                                 }
-                                break;
-                            case "properties":
+                                else
                                 {
                                     using (var st = reader.ReadSubtree())
                                     {
+                                        int i = 0;
                                         while (!st.EOF)
                                         {
                                             switch (st.NodeType)
                                             {
                                                 case XmlNodeType.Element:
-                                                    if (st.Name == "property")
+                                                    if (st.Name == "tile")
                                                     {
-                                                        if (st.GetAttribute("name") != null)
+                                                            
+                                                        if (i < result.Tiles.Length)
                                                         {
-                                                            result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
+                                                            if (st.AttributeCount > 0)
+                                                            {
+                                                                result.Tiles[i] = int.Parse(st.GetAttribute("gid"));
+                                                            }
+                                                            else result.Tiles[i] = 0;
+
+                                                            i++;
                                                         }
                                                     }
 
@@ -453,6 +424,35 @@ namespace Squared.Tiled
                                         }
                                     }
                                 }
+                                Console.WriteLine("It made it!");
+                            }
+                                break;
+                            case "properties":
+                            {
+                                using (var st = reader.ReadSubtree())
+                                {
+                                    while (!st.EOF)
+                                    {
+                                        switch (st.NodeType)
+                                        {
+                                            case XmlNodeType.Element:
+                                                if (st.Name == "property")
+                                                {
+                                                    if (st.GetAttribute("name") != null)
+                                                    {
+                                                        result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
+                                                    }
+                                                }
+
+                                                break;
+                                            case XmlNodeType.EndElement:
+                                                break;
+                                        }
+
+                                        st.Read();
+                                    }
+                                }
+                            }
                                 break;
                         }
 
@@ -582,7 +582,7 @@ namespace Squared.Tiled
                         if ((flipAndRotate & Layer.DiagonallyFlipDrawFlag) != 0)
                         {
                             if ((flipAndRotate & Layer.HorizontalFlipDrawFlag) != 0 &&
-                                 (flipAndRotate & Layer.VerticalFlipDrawFlag) != 0)
+                                (flipAndRotate & Layer.VerticalFlipDrawFlag) != 0)
                             {
                                 rotation = (float)(Math.PI / 2);
                                 flipEffect ^= SpriteEffects.FlipVertically;
@@ -687,7 +687,7 @@ namespace Squared.Tiled
                     if ((flipAndRotate & Layer.DiagonallyFlipDrawFlag) != 0)
                     {
                         if ((flipAndRotate & Layer.HorizontalFlipDrawFlag) != 0 &&
-                             (flipAndRotate & Layer.VerticalFlipDrawFlag) != 0)
+                            (flipAndRotate & Layer.VerticalFlipDrawFlag) != 0)
                         {
                             rotation = (float)(Math.PI / 2);
                             flipEffect ^= SpriteEffects.FlipVertically;
@@ -714,8 +714,8 @@ namespace Squared.Tiled
                     {
                         info = _TileInfoCache[index];
                         batch.Draw(info.Texture, destPos - viewPos, info.Rectangle,
-                                   Color.White * this.Opacity, rotation, new Vector2(tileWidth / 2f, tileHeight / 2f),
-                                   1f, flipEffect, 0);
+                            Color.White * this.Opacity, rotation, new Vector2(tileWidth / 2f, tileHeight / 2f),
+                            1f, flipEffect, 0);
                     }
 
                     destPos.X += tileWidth;
@@ -764,49 +764,49 @@ namespace Squared.Tiled
                         switch (name)
                         {
                             case "object":
+                            {
+                                using (var st = reader.ReadSubtree())
                                 {
-                                    using (var st = reader.ReadSubtree())
+                                    st.Read();
+                                    var objects = Object.Load(st);
+                                    if (!result.Objects.ContainsKey(objects.Name))
                                     {
-                                        st.Read();
-                                        var objects = Object.Load(st);
-                                        if (!result.Objects.ContainsKey(objects.Name))
-                                        {
-                                            result.Objects.Add(objects.Name, objects);
-                                        }
-                                        else
-                                        {
-                                            int count = result.Objects.Keys.Count((item) => item.Equals(objects.Name));
-                                            result.Objects.Add(string.Format("{0}{1}", objects.Name, count), objects);
-                                        }
+                                        result.Objects.Add(objects.Name, objects);
+                                    }
+                                    else
+                                    {
+                                        int count = result.Objects.Keys.Count((item) => item.Equals(objects.Name));
+                                        result.Objects.Add(string.Format("{0}{1}", objects.Name, count), objects);
                                     }
                                 }
+                            }
                                 break;
                             case "properties":
+                            {
+                                using (var st = reader.ReadSubtree())
                                 {
-                                    using (var st = reader.ReadSubtree())
+                                    while (!st.EOF)
                                     {
-                                        while (!st.EOF)
+                                        switch (st.NodeType)
                                         {
-                                            switch (st.NodeType)
-                                            {
-                                                case XmlNodeType.Element:
-                                                    if (st.Name == "property")
+                                            case XmlNodeType.Element:
+                                                if (st.Name == "property")
+                                                {
+                                                    if (st.GetAttribute("name") != null)
                                                     {
-                                                        if (st.GetAttribute("name") != null)
-                                                        {
-                                                            result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
-                                                        }
+                                                        result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
                                                     }
+                                                }
 
-                                                    break;
-                                                case XmlNodeType.EndElement:
-                                                    break;
-                                            }
-
-                                            st.Read();
+                                                break;
+                                            case XmlNodeType.EndElement:
+                                                break;
                                         }
+
+                                        st.Read();
                                     }
                                 }
+                            }
                                 break;
                         }
 
@@ -1024,74 +1024,74 @@ namespace Squared.Tiled
                             switch (name)
                             {
                                 case "map":
-                                    {
-                                        result.Width = int.Parse(reader.GetAttribute("width"));
-                                        result.Height = int.Parse(reader.GetAttribute("height"));
-                                        result.TileWidth = int.Parse(reader.GetAttribute("tilewidth"));
-                                        result.TileHeight = int.Parse(reader.GetAttribute("tileheight"));
-                                        result.Orientation = reader.GetAttribute("orientation");
-                                        result.RenderOrder = reader.GetAttribute("renderorder");
-                                    }
+                                {
+                                    result.Width = int.Parse(reader.GetAttribute("width"));
+                                    result.Height = int.Parse(reader.GetAttribute("height"));
+                                    result.TileWidth = int.Parse(reader.GetAttribute("tilewidth"));
+                                    result.TileHeight = int.Parse(reader.GetAttribute("tileheight"));
+                                    result.Orientation = reader.GetAttribute("orientation");
+                                    result.RenderOrder = reader.GetAttribute("renderorder");
+                                }
                                     break;
                                 case "tileset":
+                                {
+                                    using (var st = reader.ReadSubtree())
                                     {
-                                        using (var st = reader.ReadSubtree())
-                                        {
-                                            st.Read();
-                                            var tileset = Tileset.Load(st);
-                                            result.Tilesets.Add(tileset.Name, tileset);
-                                        }
+                                        st.Read();
+                                        var tileset = Tileset.Load(st);
+                                        result.Tilesets.Add(tileset.Name, tileset);
                                     }
+                                }
                                     break;
                                 case "layer":
+                                {
+                                    using (var st = reader.ReadSubtree())
                                     {
-                                        using (var st = reader.ReadSubtree())
+                                        st.Read();
+                                        var layer = Layer.Load(st);
+                                        if (null != layer)
                                         {
-                                            st.Read();
-                                            var layer = Layer.Load(st);
-                                            if (null != layer)
-                                            {
-                                                result.Layers.Add(layer.Name, layer);
-                                            }
+                                            result.Layers.Add(layer.Name, layer);
                                         }
                                     }
+                                }
                                     break;
                                 case "objectgroup":
+                                {
+                                    using (var st = reader.ReadSubtree())
                                     {
-                                        using (var st = reader.ReadSubtree())
-                                        {
-                                            st.Read();
-                                            var objectgroup = ObjectGroup.Load(st);
-                                            result.ObjectGroups.Add(objectgroup.Name, objectgroup);
-                                        }
+                                        st.Read();
+                                        var objectgroup = ObjectGroup.Load(st);
+                                        result.ObjectGroups.Add(objectgroup.Name, objectgroup);
                                     }
+                                }
                                     break;
                                 case "properties":
+                                {
+                                    using (var st = reader.ReadSubtree())
                                     {
-                                        using (var st = reader.ReadSubtree())
+                                        while (!st.EOF)
                                         {
-                                            while (!st.EOF)
+                                            switch (st.NodeType)
                                             {
-                                                switch (st.NodeType)
-                                                {
-                                                    case XmlNodeType.Element:
-                                                        if (st.Name == "property")
+                                                case XmlNodeType.Element:
+                                                    if (st.Name == "property")
+                                                    {
+                                                        if (st.GetAttribute("name") != null)
                                                         {
-                                                            if (st.GetAttribute("name") != null)
-                                                            {
-                                                                result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
-                                                            }
+                                                            result.Properties.Add(st.GetAttribute("name"), st.GetAttribute("value"));
                                                         }
+                                                    }
 
-                                                        break;
-                                                    case XmlNodeType.EndElement:
-                                                        break;
-                                                }
-
-                                                st.Read();
+                                                    break;
+                                                case XmlNodeType.EndElement:
+                                                    break;
                                             }
+
+                                            st.Read();
                                         }
                                     }
+                                }
                                     break;
                             }
                             break;

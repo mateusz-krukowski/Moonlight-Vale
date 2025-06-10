@@ -94,7 +94,7 @@ namespace Moonlight_Vale.Screens
             Player.Update(gameTime, keyboard);
 
             Camera.Position = Player.Position - new Vector2(1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
-                                                            1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f);
+                1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f);
 
             if (keyboard.IsKeyDown(Keys.Escape) && previousKeyboardState.IsKeyUp(Keys.Escape))
                 isInGameMenuActive = !isInGameMenuActive;
