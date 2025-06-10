@@ -9,6 +9,7 @@ namespace Moonlight_Vale.Screens.Maps;
 
 public interface IMap
 {
+    
     public Map TileMap { get; }
     public String PathToTileMap { get;  }
     public HashSet<int> PasableTileIds { get; set; }

@@ -10,7 +10,7 @@ namespace Moonlight_Vale.Screens.Maps
 {
     public class PlayerHouse : IMap
     {
-        public Map TileMap { get; set; }
+        public Map TileMap { get; set; } //set in LoadContent()
         public string PathToTileMap => @"\Tilemaps\player_house.tmx";
         public HashSet<int> PasableTileIds { get; set; }
         public Vector2 PlayerSpawnPoint { get; set; }
@@ -27,7 +27,7 @@ namespace Moonlight_Vale.Screens.Maps
                 202, // floor
                 200,201, //door
                 168, 169, 170, // chair
-                120,121,122 //another chair
+                121, //another chair
             };
         }
 

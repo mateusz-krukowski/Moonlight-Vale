@@ -81,8 +81,7 @@ namespace Moonlight_Vale.Screens
         public override void Update(GameTime gameTime)
         {
             var keyboard = Keyboard.GetState();
-
-            // Sprawdź czy klawisz E został puszczony
+            
             if (eKeyBlocked && !keyboard.IsKeyDown(Keys.E))
             {
                 eKeyBlocked = false;
@@ -111,7 +110,6 @@ namespace Moonlight_Vale.Screens
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
             
-            // Sprawdź przejścia tylko jeśli klawisz E nie jest zablokowany
             if (!eKeyBlocked)
             {
                 HandleMapTransitions(keyboard);
@@ -245,7 +243,7 @@ namespace Moonlight_Vale.Screens
         private void DrawPlayerHitbox(SpriteBatch spriteBatch)
         {
             var _texture = new Texture2D(graphicsDevice, 1, 1);
-            _texture.SetData(new Color[] { new Color(100, 250, 100, 75) });
+            _texture.SetData(new Color[] { new (100, 250, 100, 75) });
 
             Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
             Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
