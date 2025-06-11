@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
 using Microsoft.Xna.Framework;
+
 using Microsoft.Xna.Framework.Graphics;
 using Myra;
 using Myra.Graphics2D.UI;
 using FontStashSharp;
-
 using Moonlight_Vale.Screens;
 
 /*TODO:

@@ -1,9 +1,10 @@
 ﻿.idea/
+# .config is important for msbuild and nuget to know what packages need to be retrieved locally
 bin/
 obj/
 output/
 
 Folder.DotSettings.user
 
-Content/bin/
-Content/obj/
+source/Content/bin/
+source/Content/obj/
