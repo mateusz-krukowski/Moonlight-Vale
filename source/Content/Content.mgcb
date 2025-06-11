@@ -46,6 +46,18 @@
 /processorParam:TextureFormat=Color
 /build:Spritesheets/hero_spritesheet.png
 
+#begin Spritesheets/tile_cursor2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Spritesheets/tile_cursor2.png
+
 #begin Tilemaps/player_farm_reduced.tmx
 /copy:Tilemaps/player_farm_reduced.tmx
 

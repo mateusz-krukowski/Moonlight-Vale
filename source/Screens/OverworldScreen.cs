@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -146,7 +145,7 @@ namespace Moonlight_Vale.Screens
 
             int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             
-            if (tileId == 83)
+            if (CurrentMap is PlayerFarm && tileId == 83)
             {
                 if (CanUseEKey(keyboard))
                 {
@@ -227,8 +226,6 @@ namespace Moonlight_Vale.Screens
             font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
             font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}", new Vector2(20, 250), Color.White);
             font.DrawText(spriteBatch, $"Current Map: {CurrentMap?.GetType().Name}", new Vector2(20, 300), Color.White);
-            font.DrawText(spriteBatch, $"E Key Blocked: {eKeyBlocked}", new Vector2(20, 320), Color.Yellow);
-
             font.DrawText(spriteBatch, $"UpBorder: {(int)Player.UpBorder}", new Vector2(20, 350), Color.White);
             font.DrawText(spriteBatch, $"DownBorder: {(int)Player.DownBorder}", new Vector2(20, 400), Color.White);
             font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 450), Color.White);

@@ -1,40 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  
+  <!-- Basic project settings -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <RootNamespace>Moonlight_Vale</RootNamespace>
+    <AssemblyName>Moonlight Vale</AssemblyName>
     <RollForward>Major</RollForward>
     <PublishReadyToRun>false</PublishReadyToRun>
     <TieredCompilation>false</TieredCompilation>
+    <LangVersion>12.0</LangVersion>
+    
+    <!-- Icon settings -->
+    <ApplicationIcon>source\Content\Icons\icon.ico</ApplicationIcon>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <ApplicationIcon>$(MSBuildProjectDirectory)\source\Content\Icons\icon.ico</ApplicationIcon>
-  </PropertyGroup>
-
+  <!-- Package dependencies -->
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)\source\Content\Icons\Icon.ico">
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.1.303" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.1.303" />
+    <PackageReference Include="Myra" Version="1.5.9" />
+    <PackageReference Include="FontStashSharp.MonoGame" Version="1.3.9" />
+    
+    <!-- Additional packages that were in your original error -->
+    <PackageReference Include="Cyotek.Drawing.BitmapFont" Version="2.0.4" />
+    <PackageReference Include="DdsKtxXna.MonoGame" Version="0.4.4" />
+    <PackageReference Include="FontStashSharp.Base" Version="1.1.9" />
+    <PackageReference Include="FontStashSharp.Rasterizers.StbTrueTypeSharp" Version="1.1.9" />
+    <PackageReference Include="info.lundin.math" Version="1.2.0" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
+    <PackageReference Include="StbTrueTypeSharp" Version="1.26.12" />
+    <PackageReference Include="XNAssets.MonoGame" Version="0.7.5" />
+  </ItemGroup>
+  
+  <!-- Embedded resources (icons) -->
+  <ItemGroup>
+    <EmbeddedResource Include="source\Content\Icons\Icon.ico">
       <LogicalName>Icon.ico</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="$(MSBuildProjectDirectory)\source\Content\Icons\Icon.bmp">
+    <EmbeddedResource Include="source\Content\Icons\Icon.bmp">
       <LogicalName>Icon.bmp</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   
+  <!-- MonoGame content -->
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.2.1105" />
-    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.2.1105" />
-    <PackageReference Include="Myra" Version="1.5.9"/>
-    <PackageReference Include="FontStashSharp.MonoGame" Version="1.3.9"/>
+    <MonoGameContentReference Include="source\Content\Content.mgcb" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="$(MSBuildProjectDirectory)\source\Content\Content.mgcb" />
-    <Resource Include="$(MSBuildProjectDirectory)\source\Content\Content.mgcb" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="$(MSBuildProjectDirectory)\source\Content\Icons\" />
-  </ItemGroup>
-  
 </Project>
