@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -77,7 +78,7 @@ namespace Moonlight_Vale.Entity
             spriteSheet = content.Load<Texture2D>(spriteSheetPath);
         }
 
-        public void Update(GameTime gameTime, KeyboardState keyboard)
+        public void Update(GameTime gameTime, KeyboardState keyboard, MouseState mouse, MouseState previousMouseState)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             Velocity = Vector2.Zero;
@@ -119,10 +120,12 @@ namespace Moonlight_Vale.Entity
                 case var k when k.IsKeyDown(Keys.D0): SelectedItem = 9; break;
             }
 
-            if (keyboard.IsKeyDown(Keys.E))
+            if (mouse.LeftButton == ButtonState.Pressed)
             {
-                HandleTileReplacement();
+               HandleTileReplacement();
             }
+            
+           
         }
 
         private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
@@ -173,18 +176,10 @@ namespace Moonlight_Vale.Entity
 
         private void HandleTileReplacement()
         {
-            if (Map?.TileMap?.Layers == null || Map.TileMap.Layers.Count == 0)
-                return;
-
             Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
 
-            if (tileIndex.X < 0 || tileIndex.Y < 0)
-                return;
-
             var layer = Map.TileMap.Layers.Values.FirstOrDefault();
-            if (layer == null)
-                return;
-
+            
             if (tileIndex.X >= layer.Width || tileIndex.Y >= layer.Height)
                 return;
 
@@ -219,14 +214,7 @@ namespace Moonlight_Vale.Entity
             int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             return tileId.HasValue && Map.PasableTileIds.Contains(tileId.Value);
         }
-
-        public Vector2 GetCurrentTileIndex()
-        {
-            float centerX = LeftBorder + (RightBorder - LeftBorder) / 2;
-            float centerY = UpBorder + (DownBorder - UpBorder) / 2;
-            return GetTileIndex(new Vector2(centerX, centerY));
-        }
-
+        
         private Vector2 GetTileIndex(Vector2 position)
         {
             if (Map?.TileMap == null)
@@ -268,6 +256,17 @@ namespace Moonlight_Vale.Entity
         {
             var sourceRect = new Rectangle(Frame * SpriteWidth, CurrentRow * SpriteHeight, SpriteWidth, SpriteHeight);
             spriteBatch.Draw(spriteSheet, Position, sourceRect, Color.White, 0, Vector2.Zero, Zoom, SpriteEffect, 0);
+        }
+
+        public void UseTool()
+        {
+            Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
+            var layer = Map.TileMap.Layers.Values.FirstOrDefault();
+            
+            Debug.Assert(layer != null, nameof(layer) + " != null");
+            
+            int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+            
         }
     }
 }

@@ -14,24 +14,21 @@ namespace Moonlight_Vale.Screens
 {
     public class OverworldScreen : GameScreen
     {
+        public bool isInGameMenuActive;
+        public bool isHUDActive;
+        public bool isDevToolsActive;
+        public bool isMouseOverlayingHUD;
+        
         public IMap CurrentMap { get; private set; }
         public Player Player { get; private set; }
         public Camera2D Camera { get; private set; }
         public FontSystem FontSystem { get; private set; }
         public Desktop Desktop { get; private set; }
-
-        public float Zoom { get; private set; } = 2.0f;
-
-        public bool isInGameMenuActive;
-        public bool isHUDActive;
-        public bool isDevToolsActive;
-
-        public KeyboardState previousKeyboardState { get; private set; }
-
         public HudManager HudManager { get; private set; }
-
-        // Blokada klawisza E po przejściu
-        private bool eKeyBlocked = false;
+        private Texture2D TargetSprite;
+        public float Zoom { get; private set; } = 2.0f;
+        public KeyboardState previousKeyboardState { get; private set; }
+        public MouseState previousMouseState { get; private set; }
 
         public OverworldScreen(MoonlightVale game, ScreenManager manager, SpriteBatch batch, Desktop desktop)
             : base(game, manager, batch, desktop)
@@ -41,6 +38,7 @@ namespace Moonlight_Vale.Screens
             isInGameMenuActive = false;
             isHUDActive = true;
             isDevToolsActive = false;
+            isMouseOverlayingHUD = false;
         }
 
         public override void Initialize()
@@ -50,6 +48,7 @@ namespace Moonlight_Vale.Screens
             HudManager = new HudManager(this);
             HudManager.Initialize();
             previousKeyboardState = Keyboard.GetState();
+            previousMouseState = Mouse.GetState();
         }
 
         public override void LoadContent(ContentManager content)
@@ -59,6 +58,7 @@ namespace Moonlight_Vale.Screens
 
             Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap);
             Player.LoadContent(content, @"Spritesheets\hero_spritesheet");
+            TargetSprite = content.Load<Texture2D>(@"Spritesheets\tile_cursor2");
         }
 
         public void SaveGame() { }
@@ -80,17 +80,13 @@ namespace Moonlight_Vale.Screens
         public override void Update(GameTime gameTime)
         {
             var keyboard = Keyboard.GetState();
+            var mouse = Mouse.GetState();
             
-            if (eKeyBlocked && !keyboard.IsKeyDown(Keys.E))
-            {
-                eKeyBlocked = false;
-            }
-
             Camera.Zoom = Zoom;
             Player.Zoom = Zoom;
             Player.Speed = 120f;
 
-            Player.Update(gameTime, keyboard);
+            Player.Update(gameTime, keyboard, mouse, previousMouseState);
 
             Camera.Position = Player.Position - new Vector2(1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
                 1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f);
@@ -108,30 +104,14 @@ namespace Moonlight_Vale.Screens
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
-            
-            if (!eKeyBlocked)
-            {
-                HandleMapTransitions(keyboard);
-                
-                // Check for PlayerHouse specific transitions
-                if (CurrentMap is PlayerHouse playerHouse)
-                {
-                    if (CanUseEKey(keyboard))
-                    {
-                        playerHouse.CheckForExitTransition(keyboard, previousKeyboardState);
-                    }
-                }
-            }
-            
+
+            HandleMapTransitions(mouse);
+
             previousKeyboardState = keyboard;
+            previousMouseState = mouse;
         }
 
-        private bool CanUseEKey(KeyboardState keyboard)
-        {
-            return !eKeyBlocked && keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E);
-        }
-
-        private void HandleMapTransitions(KeyboardState keyboard)
+        private void HandleMapTransitions(MouseState mouse)
         {
             if (CurrentMap?.TileMap?.Layers == null || CurrentMap.TileMap.Layers.Count == 0)
                 return;
@@ -145,20 +125,19 @@ namespace Moonlight_Vale.Screens
 
             int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             
-            if (CurrentMap is PlayerFarm && tileId == 83)
+            if(mouse.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released && !isMouseOverlayingHUD)
             {
-                if (CanUseEKey(keyboard))
+                if (CurrentMap is PlayerFarm && tileId == 83)
                 {
                     SwitchToHouse();
                 }
-            }
-            else if (CurrentMap is PlayerHouse && (tileId == 168 || tileId == 169))
-            {
-                if (CanUseEKey(keyboard))
+                else if (CurrentMap is PlayerHouse 
+                         && Player.Position.X is > 219 and < 265 && Player.Position.Y >= 366)
                 {
                     SwitchToFarm();
                 }
             }
+
         }
 
         public void SwitchToHouse()
@@ -167,7 +146,6 @@ namespace Moonlight_Vale.Screens
             Player.Map = CurrentMap;
             CurrentMap.LoadContent(game.Content);
             Player.Position = CurrentMap.PlayerSpawnPoint;
-            eKeyBlocked = true; // Zablokuj klawisz E
         }
         
         public void SwitchToFarm()
@@ -176,7 +154,6 @@ namespace Moonlight_Vale.Screens
             Player.Map = CurrentMap;
             CurrentMap.LoadContent(game.Content);
             Player.Position = new Vector2(550,520);
-            eKeyBlocked = true; // Zablokuj klawisz E
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -191,6 +168,7 @@ namespace Moonlight_Vale.Screens
                 DrawLayer(spriteBatch, layer);
             }
 
+            DrawTargetTile(spriteBatch);
             Player.Draw(spriteBatch);
             spriteBatch.End();
 
@@ -264,13 +242,10 @@ namespace Moonlight_Vale.Screens
 
             int tileSize = CurrentMap.TileMap.TileWidth;
             Vector2 tileWorldPos = targetTileIndex * tileSize * 2;
-            Vector2 screenPosition = Vector2.Transform(tileWorldPos, Camera.GetViewMatrix());
             
-            var whiteTexture = new Texture2D(graphicsDevice, 1, 1);
-            whiteTexture.SetData(new[] { new Color(200, 200, 200, 5) });
-            
-            int scaledSize = (int)(tileSize * Zoom * 2);
-            spriteBatch.Draw(whiteTexture, new Rectangle((int)screenPosition.X, (int)screenPosition.Y, scaledSize, scaledSize), Color.White);
+            // Draw directly in world coordinates - SpriteBatch handles camera transform
+            spriteBatch.Draw(TargetSprite, new Rectangle((int)tileWorldPos.X, (int)tileWorldPos.Y, 
+                tileSize * 2, tileSize * 2), Color.White);
         }
 
         private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
