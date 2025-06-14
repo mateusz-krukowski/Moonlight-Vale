@@ -7,7 +7,6 @@ using Microsoft.Xna.Framework.Input;
 using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Moonlight_Vale.Screens.Maps;
-using Squared.Tiled;
 using System.Linq;
 
 namespace Moonlight_Vale.Entity
@@ -72,11 +71,23 @@ namespace Moonlight_Vale.Entity
             Map = map;
             this.overworldScreen = overworldScreen;
             UpdateBorders();
+            InitializeBasicTools();
         }
 
         public void LoadContent(ContentManager content, string spriteSheetPath)
         {
             spriteSheet = content.Load<Texture2D>(spriteSheetPath);
+
+            foreach (var item in ActionBar)
+            {
+                item?.LoadContent(content);
+            }
+
+            foreach (var item in Inventory)
+            {
+                item?.LoadContent(content);
+            }
+            
         }
 
         public void Update(GameTime gameTime, KeyboardState keyboard, MouseState mouse, MouseState previousMouseState)
@@ -268,6 +279,21 @@ namespace Moonlight_Vale.Entity
             
             int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             
+        }
+        private void InitializeBasicTools()
+        {
+            // First, ensure ActionBar has 10 slots (fill with nulls)
+            while (ActionBar.Count < 10)
+            {
+                ActionBar.Add(null);
+            }
+    
+            // Then add basic tools to first slots
+            var basicTools = Tool.CreateBasicToolset();
+            for (int i = 0; i < basicTools.Count && i < ActionBar.Count; i++)
+            {
+                ActionBar[i] = basicTools[i];
+            }
         }
     }
 }
