@@ -1,4 +1,4 @@
-﻿// OverworldScreen.cs
+﻿using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -17,6 +17,7 @@ namespace Moonlight_Vale.Screens
     public class OverworldScreen : GameScreen
     {
         public bool isInGameMenuActive;
+        public bool isBackpackActive;
         public bool isHUDActive;
         public bool isDevToolsActive;
         public bool isMouseOverlayingHUD;
@@ -47,6 +48,8 @@ namespace Moonlight_Vale.Screens
         {
             TimeSystem.Instance.Start();
             Camera = new Camera2D();
+            CurrentMap = new PlayerFarm(this);
+            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap,this);
             HudManager = new HudManager(this);
             HudManager.Initialize();
             previousKeyboardState = Keyboard.GetState();
@@ -55,10 +58,8 @@ namespace Moonlight_Vale.Screens
 
         public override void LoadContent(ContentManager content)
         {
-            CurrentMap = new PlayerFarm(this);
+            
             CurrentMap.LoadContent(content);
-
-            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap,this);
             Player.LoadContent(content, @"Spritesheets\\hero_spritesheet");
             TargetSprite = content.Load<Texture2D>(@"Spritesheets\\tile_cursor2");
         }
@@ -102,10 +103,15 @@ namespace Moonlight_Vale.Screens
             if (keyboard.IsKeyDown(Keys.LeftAlt) && keyboard.IsKeyDown(Keys.Z) &&
                 previousKeyboardState.IsKeyUp(Keys.Z))
                 isHUDActive = !isHUDActive;
+            if (keyboard.IsKeyDown(Keys.B) && previousKeyboardState.IsKeyUp(Keys.B))
+            {
+                HudManager.ToggleBackpackWindow();
+            }
 
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
+            HudManager.UpdateItemBarIcons();
 
             isMouseOverlayingHUD = HudManager.IsMouseHoveringAnyWidget(new Point(mouse.X, mouse.Y));
 
@@ -205,16 +211,26 @@ namespace Moonlight_Vale.Screens
             }
 
             font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
-            font.DrawText(spriteBatch, $"Mouse over HUD: {isMouseOverlayingHUD}", new Vector2(20, 230), Color.White);
-            font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}", new Vector2(20, 250), Color.White);
+            
+            string itemName;
+            try
+            {
+                itemName = Player.ActionBar[Player.SelectedItem].Name;
+            }
+            catch (NullReferenceException)
+            {
+                itemName = "Empty";
+            }
+
+            font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}, {itemName}", new Vector2(20, 250), Color.White);
             font.DrawText(spriteBatch, $"Current Map: {CurrentMap?.GetType().Name}", new Vector2(20, 300), Color.White);
             font.DrawText(spriteBatch, $"UpBorder: {(int)Player.UpBorder}", new Vector2(20, 350), Color.White);
             font.DrawText(spriteBatch, $"DownBorder: {(int)Player.DownBorder}", new Vector2(20, 400), Color.White);
             font.DrawText(spriteBatch, $"LeftBorder: {(int)Player.LeftBorder}", new Vector2(20, 450), Color.White);
             font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 500), Color.White);
+            font.DrawText(spriteBatch, $"Mouse over HUD: {isMouseOverlayingHUD}", new Vector2(20, 550), Color.White);
 
             DrawPlayerHitbox(spriteBatch);
-            DrawTargetTile(spriteBatch);
 
             spriteBatch.End();
         }
