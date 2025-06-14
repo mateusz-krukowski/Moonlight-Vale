@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿// OverworldScreen.cs
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -7,6 +8,7 @@ using Myra.Graphics2D.UI;
 using Moonlight_Vale.Entity;
 using Moonlight_Vale.Screens.Maps;
 using Moonlight_Vale.Systems;
+using Moonlight_Vale.UI;
 using Squared.Tiled;
 using System.Linq;
 
@@ -18,7 +20,7 @@ namespace Moonlight_Vale.Screens
         public bool isHUDActive;
         public bool isDevToolsActive;
         public bool isMouseOverlayingHUD;
-        
+
         public IMap CurrentMap { get; private set; }
         public Player Player { get; private set; }
         public Camera2D Camera { get; private set; }
@@ -56,9 +58,9 @@ namespace Moonlight_Vale.Screens
             CurrentMap = new PlayerFarm(this);
             CurrentMap.LoadContent(content);
 
-            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap);
-            Player.LoadContent(content, @"Spritesheets\hero_spritesheet");
-            TargetSprite = content.Load<Texture2D>(@"Spritesheets\tile_cursor2");
+            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap,this);
+            Player.LoadContent(content, @"Spritesheets\\hero_spritesheet");
+            TargetSprite = content.Load<Texture2D>(@"Spritesheets\\tile_cursor2");
         }
 
         public void SaveGame() { }
@@ -81,7 +83,7 @@ namespace Moonlight_Vale.Screens
         {
             var keyboard = Keyboard.GetState();
             var mouse = Mouse.GetState();
-            
+
             Camera.Zoom = Zoom;
             Player.Zoom = Zoom;
             Player.Speed = 120f;
@@ -105,6 +107,8 @@ namespace Moonlight_Vale.Screens
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
 
+            isMouseOverlayingHUD = HudManager.IsMouseHoveringAnyWidget(new Point(mouse.X, mouse.Y));
+
             HandleMapTransitions(mouse);
 
             previousKeyboardState = keyboard;
@@ -118,26 +122,25 @@ namespace Moonlight_Vale.Screens
 
             Vector2 tileIndex = GetTileIndex(Player.Position);
             var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
-            
-            if (layer == null || tileIndex.X < 0 || tileIndex.Y < 0 || 
+
+            if (layer == null || tileIndex.X < 0 || tileIndex.Y < 0 ||
                 tileIndex.X >= layer.Width || tileIndex.Y >= layer.Height)
                 return;
 
             int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            
-            if(mouse.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released && !isMouseOverlayingHUD)
+
+            if (mouse.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released && !isMouseOverlayingHUD)
             {
                 if (CurrentMap is PlayerFarm && tileId == 83)
                 {
                     SwitchToHouse();
                 }
-                else if (CurrentMap is PlayerHouse 
+                else if (CurrentMap is PlayerHouse
                          && Player.Position.X is > 219 and < 265 && Player.Position.Y >= 366)
                 {
                     SwitchToFarm();
                 }
             }
-
         }
 
         public void SwitchToHouse()
@@ -147,13 +150,13 @@ namespace Moonlight_Vale.Screens
             CurrentMap.LoadContent(game.Content);
             Player.Position = CurrentMap.PlayerSpawnPoint;
         }
-        
+
         public void SwitchToFarm()
         {
             CurrentMap = new PlayerFarm(this);
             Player.Map = CurrentMap;
             CurrentMap.LoadContent(game.Content);
-            Player.Position = new Vector2(550,520);
+            Player.Position = new Vector2(550, 520);
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -186,14 +189,14 @@ namespace Moonlight_Vale.Screens
             var font = FontSystem.GetFont(4);
 
             font.DrawText(spriteBatch, $"Player position: {(int)Player.Position.X}, {(int)Player.Position.Y}", new Vector2(20, 50), Color.White);
-            
+
             if (CurrentMap?.TileMap != null)
             {
                 Vector2 tileIndex = GetTileIndex(Player.Position);
                 font.DrawText(spriteBatch, $"Tile index: {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
 
                 var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
-                if (layer != null && tileIndex.X >= 0 && tileIndex.Y >= 0 && 
+                if (layer != null && tileIndex.X >= 0 && tileIndex.Y >= 0 &&
                     tileIndex.X < layer.Width && tileIndex.Y < layer.Height)
                 {
                     int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
@@ -202,6 +205,7 @@ namespace Moonlight_Vale.Screens
             }
 
             font.DrawText(spriteBatch, $"Is HUD active: {isHUDActive}", new Vector2(20, 200), Color.White);
+            font.DrawText(spriteBatch, $"Mouse over HUD: {isMouseOverlayingHUD}", new Vector2(20, 230), Color.White);
             font.DrawText(spriteBatch, $"Selected Item: {Player.SelectedItem}", new Vector2(20, 250), Color.White);
             font.DrawText(spriteBatch, $"Current Map: {CurrentMap?.GetType().Name}", new Vector2(20, 300), Color.White);
             font.DrawText(spriteBatch, $"UpBorder: {(int)Player.UpBorder}", new Vector2(20, 350), Color.White);
@@ -211,14 +215,14 @@ namespace Moonlight_Vale.Screens
 
             DrawPlayerHitbox(spriteBatch);
             DrawTargetTile(spriteBatch);
-            
+
             spriteBatch.End();
         }
 
         private void DrawPlayerHitbox(SpriteBatch spriteBatch)
         {
             var _texture = new Texture2D(graphicsDevice, 1, 1);
-            _texture.SetData(new Color[] { new (100, 250, 100, 75) });
+            _texture.SetData(new Color[] { new(100, 250, 100, 75) });
 
             Vector2 worldPosition = new Vector2(Player.LeftBorder, Player.UpBorder);
             Vector2 screenPosition = Vector2.Transform(worldPosition, Camera.GetViewMatrix());
@@ -234,17 +238,16 @@ namespace Moonlight_Vale.Screens
             var keyboard = Keyboard.GetState();
             if (!keyboard.IsKeyDown(Keys.LeftControl) || CurrentMap?.TileMap == null)
                 return;
-            
+
             Vector2 targetTileIndex = Player.GetTargetTileIndex(Player.Position, Player.Direction);
-            
+
             if (targetTileIndex.X < 0 || targetTileIndex.Y < 0)
                 return;
 
             int tileSize = CurrentMap.TileMap.TileWidth;
             Vector2 tileWorldPos = targetTileIndex * tileSize * 2;
-            
-            // Draw directly in world coordinates - SpriteBatch handles camera transform
-            spriteBatch.Draw(TargetSprite, new Rectangle((int)tileWorldPos.X, (int)tileWorldPos.Y, 
+
+            spriteBatch.Draw(TargetSprite, new Rectangle((int)tileWorldPos.X, (int)tileWorldPos.Y,
                 tileSize * 2, tileSize * 2), Color.White);
         }
 

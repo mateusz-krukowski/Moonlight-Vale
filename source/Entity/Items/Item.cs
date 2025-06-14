@@ -23,8 +23,6 @@ namespace Moonlight_Vale.Entity.Items
             StackSize = stackSize;
             Price = price;
             IconPath = iconPath;
-            
-            
         }
         public virtual void LoadContent(GraphicsDevice graphicsDevice)
         {

@@ -34,7 +34,7 @@ namespace Moonlight_Vale.Entity
         public List<Item> Inventory { get; } = new List<Item>(30);
         public List<Item> ActionBar { get; } = new List<Item>(10);
 
-        public OverworldScreen OverworldScreen { get; set; }
+        public OverworldScreen overworldScreen { get; set; }
 
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
@@ -66,10 +66,11 @@ namespace Moonlight_Vale.Entity
             }
         }
 
-        public Player(Vector2 startPosition, IMap map)
+        public Player(Vector2 startPosition, IMap map, OverworldScreen overworldScreen)
         {
             Position = startPosition;
             Map = map;
+            this.overworldScreen = overworldScreen;
             UpdateBorders();
         }
 
@@ -122,7 +123,7 @@ namespace Moonlight_Vale.Entity
 
             if (mouse.LeftButton == ButtonState.Pressed)
             {
-               HandleTileReplacement();
+               if(!overworldScreen.isMouseOverlayingHUD) HandleTileReplacement();
             }
             
            

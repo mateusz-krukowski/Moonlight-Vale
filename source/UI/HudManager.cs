@@ -1,4 +1,5 @@
-﻿using System;
+﻿// HudManager.cs
+using System;
 using FontStashSharp;
 using FontStashSharp.RichText;
 using Microsoft.Xna.Framework;
@@ -9,20 +10,23 @@ using Myra.Graphics2D;
 using Myra.Graphics2D.Brushes;
 using Myra.Graphics2D.UI;
 
+namespace Moonlight_Vale.UI;
+
 public class HudManager
 {
-    private Label timeLabel;
     private OverworldScreen overworldScreen;
-
     private Grid hud;
+    private Label timeLabel;
     private HorizontalStackPanel itemBar;
+    private HorizontalStackPanel utilitiesBar;
     private VerticalStackPanel inGameMenu;
     private Window settingsWindow;
+    private Window backpackWindow;
 
     public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
+    public MouseState Mouse => overworldScreen.previousMouseState;
     public Desktop Desktop => overworldScreen.Desktop;
     public FontSystem FontSystem => overworldScreen.FontSystem;
-    
     public TimeSystem TimeSystem = TimeSystem.Instance;
 
     public HudManager(OverworldScreen overworldScreen)
@@ -32,15 +36,28 @@ public class HudManager
 
     public void Initialize()
     {
-        var rootPanel = new Panel();
+        hud = new Grid
+        {
+            Background = new SolidBrush(Color.Transparent),
+            ShowGridLines = false,
+            Width = 1920,
+            Height = 1080,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Padding = new Thickness(0)
+        };
 
+        timeLabel = CreateTimeWidget();
+        itemBar = CreateItemBar();
+        utilitiesBar = CreateUtilitiesBar();
         inGameMenu = CreateInGameMenu();
-        hud = CreateHUD();
 
-        rootPanel.Widgets.Add(hud);
-        rootPanel.Widgets.Add(inGameMenu);
+        hud.Widgets.Add(timeLabel);
+        hud.Widgets.Add(itemBar);
+        hud.Widgets.Add(utilitiesBar);
+        hud.Widgets.Add(inGameMenu);
 
-        Desktop.Root = rootPanel;
+        Desktop.Root = hud;
     }
 
     public void UpdateVisibility(bool hudVisible, bool menuVisible)
@@ -53,7 +70,7 @@ public class HudManager
     {
         timeLabel.Text = $"{TimeSystem.CurrentHour:D2}:{TimeSystem.CurrentMinute:D2} - {TimeSystem.CurrentPeriod}";
     }
-    
+
     public void UpdateItemBarSelection(int selectedIndex)
     {
         for (int i = 0; i < 10; i++)
@@ -70,18 +87,54 @@ public class HudManager
         Desktop.Render();
     }
 
-    private Grid CreateHUD()
+    public bool IsMouseHoveringAnyWidget(Point mousePosition)
     {
-        var grid = new Grid
+        foreach (var widget in hud.Widgets)
         {
-            Background = new SolidBrush(Color.Transparent),
-            ShowGridLines = true,
-            Visible = true,
-            Width = 1920,
-            Height = 1080
-        };
+            if (!widget.Visible)
+                continue;
+            
+            if (widget == inGameMenu)
+            {
+                foreach (var child in inGameMenu.Widgets)
+                {
+                    if (child.Visible && child.HitTest(mousePosition) != null)
+                        return true;
+                }
+            }
+            else
+            {
+                if (widget.HitTest(mousePosition) != null)
+                    return true;
+            }
+        }
 
-         itemBar = new HorizontalStackPanel
+        return false;
+    }
+
+
+    private Label CreateTimeWidget()
+    {
+        return new Label
+        {
+            Text = "",
+            Font = FontSystem.GetFont(4),
+            TextColor = Color.White,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 20, 20, 0),
+            Padding = new Thickness(0),
+            Width = 350,
+            Height = 90,
+            Border = new SolidBrush(Color.White),
+            BorderThickness = new Thickness(2),
+            Background = new SolidBrush(new Color(142, 105, 67))
+        };
+    }
+
+    private HorizontalStackPanel CreateItemBar()
+    {
+        var bar = new HorizontalStackPanel
         {
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Bottom,
@@ -91,16 +144,21 @@ public class HudManager
 
         for (int i = 0; i < 10; i++)
         {
-            itemBar.Widgets.Add(new Panel
+            bar.Widgets.Add(new Panel
             {
                 Width = 64,
                 Height = 64,
-                Background = new SolidBrush(new Color(142,105,67)),
+                Background = new SolidBrush(new Color(142, 105, 67)),
                 BorderThickness = new Thickness(4)
             });
         }
 
-        var utilities = new HorizontalStackPanel
+        return bar;
+    }
+
+    private HorizontalStackPanel CreateUtilitiesBar()
+    {
+        var bar = new HorizontalStackPanel
         {
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom,
@@ -111,7 +169,7 @@ public class HudManager
         string[] letters = { "c", "b", "j", "m" };
         foreach (var letter in letters)
         {
-            utilities.Widgets.Add(new Label
+            bar.Widgets.Add(new Label
             {
                 Width = 60,
                 Height = 60,
@@ -120,38 +178,15 @@ public class HudManager
                 TextColor = Color.White,
                 TextAlign = TextHorizontalAlignment.Center,
                 Padding = new Thickness(0, 30, 0, 0),
-                Background = new SolidBrush(new Color(142,105,67)),
+                Background = new SolidBrush(new Color(142, 105, 67)),
                 Border = new SolidBrush(Color.White),
                 BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             });
         }
-        
-        var timeWidget = CreateTimeWidget();
-        
-        grid.Widgets.Add(timeWidget);
-        grid.Widgets.Add(itemBar);
-        grid.Widgets.Add(utilities);
 
-        return grid;
-    }
-
-    private TextButton CreateButton(string text, Action onClick)
-    {
-        var button = new TextButton
-        {
-            Text = text,
-            Font = FontSystem.GetFont(2.3f),
-            Width = 220,
-            Height = 45,
-            Padding = new Thickness(0, 20, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        button.Click += (s, e) => onClick?.Invoke();
-        return button;
+        return bar;
     }
 
     private VerticalStackPanel CreateInGameMenu()
@@ -176,33 +211,24 @@ public class HudManager
         return menu;
     }
 
-    private Widget CreateTimeWidget()
+    private TextButton CreateButton(string text, Action onClick)
     {
-        timeLabel = new Label
+        var button = new TextButton
         {
-            Text = $"{TimeSystem.CurrentHour:D2}:{TimeSystem.CurrentMinute:D2} - {TimeSystem.CurrentPeriod}",
-            Font = FontSystem.GetFont(4),
-            TextColor = Color.White,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 30, 20, 0),
-            Padding = new Thickness(5,30,0,0),
-            Width = 350,
-            Height = 90,
-            Border = new SolidBrush(Color.White),
-            BorderThickness = new Thickness(2),
-            Background = new SolidBrush(new Color(142,105,67))
+            Text = text,
+            Font = FontSystem.GetFont(2.3f),
+            Width = 220,
+            Height = 45,
+            Padding = new Thickness(0, 20, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
         };
-        return timeLabel;
+
+        button.Click += (s, e) => onClick?.Invoke();
+        return button;
     }
 
-    private Widget CreateCharacterPortrait()
-    {
-        return null;
-        //pora na CS'a
-    }
-
-    public Window CreateSettingsWindow()
+    public void CreateSettingsWindow()
     {
         if (settingsWindow == null)
         {
@@ -215,18 +241,34 @@ public class HudManager
                 Padding = new Thickness(10),
                 HorizontalAlignment = 0,
                 VerticalAlignment = 0
-
             };
-            
-            settingsWindow.Closed += (s, e) => settingsWindow = null;
-            Desktop.Widgets.Add(settingsWindow);
-        }
-        
-        settingsWindow.Visible = true;
 
-        return settingsWindow; 
+            settingsWindow.Closed += (s, e) => settingsWindow = null;
+            hud.Widgets.Add(settingsWindow);
+        }
+
+        settingsWindow.Visible = true;
     }
-    
+
+    public void CreateBackpackWindow()
+    {
+        if (backpackWindow == null)
+        {
+            backpackWindow = new Window()
+            {
+                Title = "",
+                Width = 800,
+                Height = 600,
+                Background = new SolidBrush(new Color(142, 105, 67)),
+                Padding = new Thickness(10),
+                HorizontalAlignment = 0,
+                VerticalAlignment = 0
+            };
+            backpackWindow.Closed += (s, e) => backpackWindow = null;
+            hud.Widgets.Add(backpackWindow);
+        }
+    }
+
     public void ToggleSettingsWindow()
     {
         if (settingsWindow == null)
@@ -239,4 +281,5 @@ public class HudManager
         }
     }
 
+    public void ToggleBagpackWindow() { }
 }
