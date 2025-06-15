@@ -25,10 +25,10 @@ namespace Moonlight_Vale.Screens.Maps
             PasableTileIds = new HashSet<int>
             {
                 1, //grass
-                12, //dirt
+                12,13,127, //dirt
                 114,115,116, //stairs
                 98,99,100,101,102, //house porch
-                34,36,38,40 //cliff shadows
+                33,34,35,36,37,38,39,40 //cliff shadows
                 
             }; 
 
