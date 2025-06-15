@@ -19,8 +19,10 @@ namespace Moonlight_Vale.Entity
         private const float DEFAULT_SPEED = 5000f;
         private const float SPRINT_MULTIPLIER = 1.8f;
         private const float ANIMATION_SPEED = 0.18f;
+        private const float TOOL_COOLDOWN = 0.1f; // Cooldown between tool uses in seconds
 
         private float _energy = 100f;
+        private float _toolCooldownTimer = 0f;
 
         private Texture2D spriteSheet;
 
@@ -95,6 +97,10 @@ namespace Moonlight_Vale.Entity
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             Velocity = Vector2.Zero;
 
+            // Update tool cooldown timer
+            if (_toolCooldownTimer > 0)
+                _toolCooldownTimer -= deltaTime;
+
             float currentSpeed = Speed;
             if (keyboard.IsKeyDown(Keys.LeftShift))
                 currentSpeed *= SPRINT_MULTIPLIER;
@@ -132,12 +138,17 @@ namespace Moonlight_Vale.Entity
                 case var k when k.IsKeyDown(Keys.D0): SelectedItem = 9; break;
             }
 
-            if (mouse.LeftButton == ButtonState.Pressed)
+            // Check if left mouse button was just pressed (not held down) and cooldown has expired
+            if (mouse.LeftButton == ButtonState.Pressed && 
+                previousMouseState.LeftButton == ButtonState.Released && 
+                _toolCooldownTimer <= 0)
             {
-               if(!overworldScreen.isMouseOverlayingHUD) HandleTileReplacement();
+               if(!overworldScreen.isMouseOverlayingHUD) 
+               {
+                   UseTool();
+                   _toolCooldownTimer = TOOL_COOLDOWN; // Start cooldown
+               }
             }
-            
-           
         }
 
         private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
@@ -184,22 +195,6 @@ namespace Moonlight_Vale.Entity
             Position = newPosition;
             UpdateAnimation(deltaTime);
             UpdateBorders();
-        }
-
-        private void HandleTileReplacement()
-        {
-            Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
-
-            var layer = Map.TileMap.Layers.Values.FirstOrDefault();
-            
-            if (tileIndex.X >= layer.Width || tileIndex.Y >= layer.Height)
-                return;
-
-            int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            if (currentTileId is 12 or 1)
-            {
-                layer.Tiles[(int)(tileIndex.Y * layer.Width + tileIndex.X)] = 12;
-            }
         }
 
         private void UpdateBorders()
@@ -272,14 +267,48 @@ namespace Moonlight_Vale.Entity
 
         public void UseTool()
         {
+            // Check if there's a selected item in the action bar
+            if (SelectedItem < 0 || SelectedItem >= ActionBar.Count || ActionBar[SelectedItem] == null)
+                return;
+
+            var selectedTool = ActionBar[SelectedItem];
             Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
             var layer = Map.TileMap.Layers.Values.FirstOrDefault();
             
-            Debug.Assert(layer != null, nameof(layer) + " != null");
-            
+            if (layer == null || tileIndex.X >= layer.Width || tileIndex.Y >= layer.Height)
+                return;
+
             int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             
+            string toolName = selectedTool?.Name?.ToLower() ?? "";
+
+            int newTileId = currentTileId;
+
+            if (toolName.Contains("shovel"))
+            {
+                newTileId = currentTileId switch
+                {
+                    1 => 13,    // grass -> tilled soil
+                    13 => 1,    // tilled soil -> grass
+                    _ => currentTileId
+                };
+            }
+            else if (toolName.Contains("hoe"))
+            {
+                newTileId = currentTileId switch
+                {
+                    13 => 127,  
+                    127 => 13, 
+                    _ => currentTileId
+                };
+            }
+
+            if (newTileId != currentTileId)
+            {
+                layer.Tiles[(int)(tileIndex.Y * layer.Width + tileIndex.X)] = newTileId;
+            }
         }
+
         private void InitializeBasicTools()
         {
             // First, ensure ActionBar has 10 slots (fill with nulls)
