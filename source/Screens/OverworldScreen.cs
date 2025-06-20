@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,16 +12,17 @@ using Moonlight_Vale.Systems;
 using Moonlight_Vale.UI;
 using Squared.Tiled;
 using System.Linq;
+using Moonlight_Vale.Entity.Items;
 
 namespace Moonlight_Vale.Screens
 {
     public class OverworldScreen : GameScreen
     {
         public bool isInGameMenuActive;
-        public bool isBackpackActive;
         public bool isHUDActive;
         public bool isDevToolsActive;
         public bool isMouseOverlayingHUD;
+        public bool newGame;
 
         public IMap CurrentMap { get; private set; }
         public Player Player { get; private set; }
@@ -28,12 +30,14 @@ namespace Moonlight_Vale.Screens
         public FontSystem FontSystem { get; private set; }
         public Desktop Desktop { get; private set; }
         public HudManager HudManager { get; private set; }
+        public LogWindow LogWindow { get; private set; }
+        public SavingSystem SavingSystem => SavingSystem.Instance;
         private Texture2D TargetSprite;
         public float Zoom { get; private set; } = 2.0f;
         public KeyboardState previousKeyboardState { get; private set; }
         public MouseState previousMouseState { get; private set; }
 
-        public OverworldScreen(MoonlightVale game, ScreenManager manager, SpriteBatch batch, Desktop desktop)
+        public OverworldScreen(MoonlightVale game, ScreenManager manager, SpriteBatch batch, Desktop desktop, bool newGame)
             : base(game, manager, batch, desktop)
         {
             FontSystem = game._fontSystem;
@@ -42,34 +46,67 @@ namespace Moonlight_Vale.Screens
             isHUDActive = true;
             isDevToolsActive = false;
             isMouseOverlayingHUD = false;
+            this.newGame = newGame;
         }
 
         public override void Initialize()
         {
+            PlantData.LoadFromJson(content.RootDirectory + @"\Data\plants.json");
             TimeSystem.Instance.Start();
+            
+            // Subscribe to player collapse event
+            TimeSystem.Instance.PlayerCollapsedFromExhaustion += OnPlayerCollapsedFromExhaustion;
+            
             Camera = new Camera2D();
             CurrentMap = new PlayerFarm(this);
-            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap,this);
+            Player = new Player(CurrentMap.PlayerSpawnPoint, CurrentMap, this);
             HudManager = new HudManager(this);
             HudManager.Initialize();
+            
             previousKeyboardState = Keyboard.GetState();
             previousMouseState = Mouse.GetState();
         }
 
+        private void OnPlayerCollapsedFromExhaustion(Vector2 spawnPosition)
+        {
+            Console.WriteLine("Player collapsed from exhaustion! Moving to PlayerHouse...");
+            
+            SwitchToPlayerHouse();
+            
+            // Set player position to the exact spawn coordinates from TimeSystem (142, 120)
+            Player.Position = spawnPosition;
+            
+            // Update camera to follow player at new position
+            Camera.Position = Player.Position - new Vector2(1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
+                1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f);
+            
+            Console.WriteLine($"Player spawned at home: {spawnPosition}");
+        }
+
+        private void SwitchToPlayerHouse()
+        {
+            CurrentMap = new PlayerHouse(this);
+            Player.Map = CurrentMap;
+            CurrentMap.LoadContent(game.Content);
+        }
+
         public override void LoadContent(ContentManager content)
         {
-            
             CurrentMap.LoadContent(content);
             Player.LoadContent(content, @"Spritesheets\\hero_spritesheet");
             TargetSprite = content.Load<Texture2D>(@"Spritesheets\\tile_cursor2");
+
+            // Initialize LogWindow with FontSystem
+            LogWindow = new LogWindow(game.GraphicsDevice,  1920, 1080);
+
+            newGame = false;
         }
 
         public void SaveGame() { }
         public void LoadGame() { }
-        public void OpenSettings() { HudManager.CreateSettingsWindow(); }
-
         public void ReturnToMenu()
-        {
+        {   
+            TimeSystem.Instance.Stop();
             screenManager.RemoveScreen();
             screenManager.AddScreen(new MainMenuScreen(game, screenManager, spriteBatch, Desktop, FontSystem));
         }
@@ -87,7 +124,6 @@ namespace Moonlight_Vale.Screens
 
             Camera.Zoom = Zoom;
             Player.Zoom = Zoom;
-            Player.Speed = 120f;
 
             Player.Update(gameTime, keyboard, mouse, previousMouseState);
 
@@ -103,15 +139,24 @@ namespace Moonlight_Vale.Screens
             if (keyboard.IsKeyDown(Keys.LeftAlt) && keyboard.IsKeyDown(Keys.Z) &&
                 previousKeyboardState.IsKeyUp(Keys.Z))
                 isHUDActive = !isHUDActive;
+                
             if (keyboard.IsKeyDown(Keys.B) && previousKeyboardState.IsKeyUp(Keys.B))
             {
                 HudManager.ToggleBackpackWindow();
+            }
+            if (keyboard.IsKeyDown(Keys.I) && !previousKeyboardState.IsKeyDown(Keys.I)) // Jednokrotne naciśnięcie I
+            {
+                Player.PrintInventory();
             }
 
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);
             HudManager.UpdateItemBarIcons();
+            HudManager.UpdateTooltip();
+            
+            // Always update LogWindow to capture console output
+            LogWindow.Update(gameTime);
 
             isMouseOverlayingHUD = HudManager.IsMouseHoveringAnyWidget(new Point(mouse.X, mouse.Y));
 
@@ -141,16 +186,25 @@ namespace Moonlight_Vale.Screens
                 {
                     SwitchToHouse();
                 }
-                else if (CurrentMap is PlayerHouse
-                         && Player.Position.X is > 219 and < 265 && Player.Position.Y >= 366)
+                else if (CurrentMap is PlayerHouse)
                 {
-                    SwitchToFarm();
+                    // Check for sleeping (bed area)
+                    if (Player.Position.X > 128 && Player.Position.X < 130 && Player.Position.Y > 105 && Player.Position.Y < 165)
+                    {
+                        TimeSystem.Instance.StartSleeping();
+                    }
+                    // Check for exit (door area)
+                    if (Player.Position.X is > 219 and < 265 && Player.Position.Y >= 364)
+                    {
+                        SwitchToFarm();
+                    }
                 }
             }
         }
 
         public void SwitchToHouse()
         {
+            // No need to save farm state - changes are already saved immediately
             CurrentMap = new PlayerHouse(this);
             Player.Map = CurrentMap;
             CurrentMap.LoadContent(game.Content);
@@ -184,6 +238,11 @@ namespace Moonlight_Vale.Screens
             if (isDevToolsActive)
             {
                 DrawDebugInfo(spriteBatch);
+                
+                // Draw LogWindow as part of dev tools
+                spriteBatch.Begin();
+                LogWindow.Draw(spriteBatch);
+                spriteBatch.End();
             }
 
             HudManager.Draw();
@@ -230,9 +289,76 @@ namespace Moonlight_Vale.Screens
             font.DrawText(spriteBatch, $"RightBorder: {(int)Player.RightBorder}", new Vector2(20, 500), Color.White);
             font.DrawText(spriteBatch, $"Mouse over HUD: {isMouseOverlayingHUD}", new Vector2(20, 550), Color.White);
 
+            font = FontSystem.GetFont(3);
             DrawPlayerHitbox(spriteBatch);
+            DrawPlantNameOnHover(spriteBatch, font);
 
             spriteBatch.End();
+        }
+
+        private void DrawPlantNameOnHover(SpriteBatch spriteBatch, SpriteFontBase font)
+        {
+            var mouse = Mouse.GetState();
+            Vector2 mouseScreenPos = new Vector2(mouse.X, mouse.Y);
+            
+            // Convert mouse screen position to world position
+            Matrix inverseViewMatrix = Matrix.Invert(Camera.GetViewMatrix());
+            Vector2 mouseWorldPos = Vector2.Transform(mouseScreenPos, inverseViewMatrix);
+            
+            // Get tile index from mouse world position
+            Vector2 mouseTileIndex = GetTileIndex(mouseWorldPos);
+            
+            if (CurrentMap?.TileMap?.Layers == null || CurrentMap.TileMap.Layers.Count == 0)
+                return;
+                
+            var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
+            if (layer == null || mouseTileIndex.X < 0 || mouseTileIndex.Y < 0 ||
+                mouseTileIndex.X >= layer.Width || mouseTileIndex.Y >= layer.Height)
+                return;
+                
+            // Check if the tile has planted seeds (ID 111 or 112)
+            int? tileId = layer.GetTile((int)mouseTileIndex.X, (int)mouseTileIndex.Y);
+            var expectedTileIds = new List<int?> {111, 112, 79, 80, 85, 95 }; // dry seeds, watered seeds, growing plants, ready to harvest
+            if (expectedTileIds.Contains(tileId))
+            {
+                // Get plant from PlantGrowthSystem
+                var plant = PlantGrowthSystem.Instance.GetPlantAt((int)mouseTileIndex.X, (int)mouseTileIndex.Y);
+                if (plant != null)
+                {
+                    // Create multi-line plant info using plant's properties and methods
+                    string plantInfo = $"{plant.Name}\n" +
+                                     $"Planted on day: {plant.PlantingDay}\n" +
+                                     $"Days to grow: {plant.GetDaysRemainingToGrow()}\n" +
+                                     $"Watered: {(plant.isWatered ? "Yes" : "No")}";
+                    
+                    Vector2 textPosition = new Vector2(mouse.X + 10, mouse.Y - 80);
+                    
+                    // Calculate background size for multi-line text
+                    string[] lines = plantInfo.Split('\n');
+                    float maxWidth = 0;
+                    foreach (string line in lines)
+                    {
+                        float lineWidth = font.MeasureString(line).X;
+                        if (lineWidth > maxWidth)
+                            maxWidth = lineWidth;
+                    }
+                    
+                    int lineHeight = 20; // Approximate line height
+                    var backgroundRect = new Rectangle((int)textPosition.X - 5, (int)textPosition.Y - 5, 
+                        (int)maxWidth + 10, lines.Length * lineHeight + 10);
+                    
+                    var backgroundTexture = new Texture2D(graphicsDevice, 1, 1);
+                    backgroundTexture.SetData(new Color[] { new Color(0, 0, 0, 180) });
+                    spriteBatch.Draw(backgroundTexture, backgroundRect, Color.White);
+                    
+                    // Draw each line of plant info
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        Vector2 linePosition = new Vector2(textPosition.X, textPosition.Y + i * lineHeight);
+                        font.DrawText(spriteBatch, lines[i], linePosition, Color.White);
+                    }
+                }
+            }
         }
 
         private void DrawPlayerHitbox(SpriteBatch spriteBatch)
@@ -287,6 +413,12 @@ namespace Moonlight_Vale.Screens
 
         public override void Unload()
         {
+            // Unsubscribe from collapse event to prevent memory leaks
+            TimeSystem.Instance.PlayerCollapsedFromExhaustion -= OnPlayerCollapsedFromExhaustion;
+            
+            // Dispose LogWindow to restore console
+            LogWindow?.Dispose();
+            
             Desktop.Widgets.Clear();
             Desktop.Root = null;
         }

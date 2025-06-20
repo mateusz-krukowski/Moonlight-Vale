@@ -133,9 +133,10 @@ namespace Moonlight_Vale.Screens
                 switch (button.Text)
                 {
                     case "New Game":
-                    {
+                    {   
+                        SavingSystem.Instance.InitializeNewSave();
                         screenManager.RemoveScreen();
-                        screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop));
+                        screenManager.AddScreen(new OverworldScreen(game,screenManager,spriteBatch,desktop, true));
                         break;
                     }
                     case "Exit":

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -7,6 +8,7 @@ using Microsoft.Xna.Framework.Input;
 using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Moonlight_Vale.Screens.Maps;
+using Moonlight_Vale.Systems;
 using System.Linq;
 
 namespace Moonlight_Vale.Entity
@@ -16,8 +18,8 @@ namespace Moonlight_Vale.Entity
         private const int SPRITE_WIDTH = 16;
         private const int SPRITE_HEIGHT = 24;
         private const float HEAD_OFFSET = 12f;
-        private const float DEFAULT_SPEED = 5000f;
-        private const float SPRINT_MULTIPLIER = 1.8f;
+        private const float DEFAULT_SPEED = 190f;
+        private const float SPRINT_MULTIPLIER = 1.4f;
         private const float ANIMATION_SPEED = 0.18f;
         private const float TOOL_COOLDOWN = 0.1f; // Cooldown between tool uses in seconds
 
@@ -69,16 +71,26 @@ namespace Moonlight_Vale.Entity
 
         public Player(Vector2 startPosition, IMap map, OverworldScreen overworldScreen)
         {
-            Position = startPosition;
+            if (overworldScreen.newGame == true)
+            {
+                Position = startPosition;
+                InitializeBasicTools();
+                InitializeSeeds();
+            }
+            else
+            {
+                
+            } //handle continue game logic
+            
             Map = map;
             this.overworldScreen = overworldScreen;
             UpdateBorders();
-            InitializeBasicTools();
         }
 
         public void LoadContent(ContentManager content, string spriteSheetPath)
         {
             spriteSheet = content.Load<Texture2D>(spriteSheetPath);
+            
 
             foreach (var item in ActionBar)
             {
@@ -145,10 +157,24 @@ namespace Moonlight_Vale.Entity
             {
                if(!overworldScreen.isMouseOverlayingHUD) 
                {
-                   UseTool();
+                   UseToolOrSeed(); // Changed from UseTool() to UseToolOrSeed()
                    _toolCooldownTimer = TOOL_COOLDOWN; // Start cooldown
                }
             }
+
+            // Check if right mouse button was just pressed (not held down) and cooldown has expired
+            if (mouse.RightButton == ButtonState.Pressed && 
+                previousMouseState.RightButton == ButtonState.Released && 
+                _toolCooldownTimer <= 0)
+            {
+               if(!overworldScreen.isMouseOverlayingHUD && Map is PlayerFarm) 
+               {
+                   HarvestCrop();
+                   _toolCooldownTimer = TOOL_COOLDOWN; // Start cooldown
+               }
+            }
+            
+            
         }
 
         private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
@@ -265,13 +291,20 @@ namespace Moonlight_Vale.Entity
             spriteBatch.Draw(spriteSheet, Position, sourceRect, Color.White, 0, Vector2.Zero, Zoom, SpriteEffect, 0);
         }
 
-        public void UseTool()
+        public void UseToolOrSeed()
         {
             // Check if there's a selected item in the action bar
             if (SelectedItem < 0 || SelectedItem >= ActionBar.Count || ActionBar[SelectedItem] == null)
                 return;
 
-            var selectedTool = ActionBar[SelectedItem];
+            // Check if we're on PlayerFarm
+            if (!(Map is PlayerFarm playerFarm))
+            {
+                Console.WriteLine("Tools and seeds can only be used on the farm!");
+                return;
+            }
+
+            var selectedItem = ActionBar[SelectedItem];
             Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
             var layer = Map.TileMap.Layers.Values.FirstOrDefault();
             
@@ -279,11 +312,103 @@ namespace Moonlight_Vale.Entity
                 return;
 
             int currentTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-            
-            string toolName = selectedTool?.Name?.ToLower() ?? "";
-
             int newTileId = currentTileId;
 
+            switch (selectedItem)
+            {
+                case Seed seed:
+                    HandleSeedPlanting(seed, currentTileId, tileIndex, layer, ref newTileId);
+                    break;
+                case Tool tool:
+                    string itemName = tool.Name?.ToLower() ?? "";
+                    HandleToolUsage(itemName, currentTileId, ref newTileId);
+                    break;
+                default:
+                    // Handle other items if needed
+                    break;
+            }
+
+            // Apply tile change if necessary
+            if (newTileId != currentTileId)
+            {
+                playerFarm.ModifyTile((int)tileIndex.X, (int)tileIndex.Y, newTileId);
+            }
+        }
+
+        public void HarvestCrop()
+        {
+            Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
+            var layer = Map.TileMap.Layers.Values.FirstOrDefault();
+            
+            int targetTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
+            
+            // Check if tile ID is 95 (mature plant)
+            if (targetTileId == 95)
+            {
+                // Get plant data from growth system
+                var plant = PlantGrowthSystem.Instance.GetPlantAt((int)tileIndex.X, (int)tileIndex.Y);
+                
+                if (plant != null)
+                {
+                    // Change tile to empty farmland (ID 12) using playerFarm.ModifyTile
+                    ((PlayerFarm)Map).ModifyTile((int)tileIndex.X, (int)tileIndex.Y, 13);
+                    
+                    // Generate random harvest amount (1-3)
+                    Random random = new Random();
+                    int amountToHarvest = random.Next(1, 4); // 1-3 inclusive
+                    
+                    // Create crop with plant name
+                    var crop = Crop.CreateCrop(plant.Name); // Using Name instead of Type
+                    
+                    // Add to inventory
+                    AddItemToInventory(crop, amountToHarvest);
+                    
+                    
+                    // Remove plant from growth system
+                    PlantGrowthSystem.Instance.RemovePlant((int)tileIndex.X, (int)tileIndex.Y);
+                    
+                    Console.WriteLine($"Harvested {amountToHarvest}x {plant.Name}!");
+                }
+            }
+        }
+
+        private void HandleSeedPlanting(Seed seed, int currentTileId, Vector2 tileIndex, dynamic layer, ref int newTileId)
+        {
+            // Check if tile can be planted on
+            if (currentTileId == 127 || currentTileId == 128) // tilled soil or watered soil
+            {
+                newTileId = currentTileId switch
+                {
+                    127 => 111, // tilled soil -> dry seeds
+                    128 => 112, // watered soil -> watered seeds
+                    _ => currentTileId
+                };
+
+                // Extract seed name (remove " seed" suffix)
+                string seedName = seed.Name;
+                if (seedName.EndsWith(" seed"))
+                {
+                    seedName = seedName.Substring(0, seedName.Length - 5); // Remove " seed"
+                }
+
+                // Plant the seed in the growth system, passing the initial tile type
+                PlantGrowthSystem.Instance.PlantSeed(seedName, (int)tileIndex.X, (int)tileIndex.Y, newTileId);
+                
+                // Reduce seed count or remove from inventory if it's the last one
+                if (seed.Amount > 1)
+                {
+                    seed.DecreaseAmount(); // Assuming this method exists
+                }
+                else
+                {
+                    // Remove seed from action bar if it's the last one
+                    ActionBar[SelectedItem] = null;
+                }
+            }
+        }
+
+        private void HandleToolUsage(string toolName, int currentTileId, ref int newTileId)
+        {
             if (toolName.Contains("shovel"))
             {
                 newTileId = currentTileId switch
@@ -297,15 +422,31 @@ namespace Moonlight_Vale.Entity
             {
                 newTileId = currentTileId switch
                 {
-                    13 => 127,  
-                    127 => 13, 
+                    13 => 127,  // tilled soil -> prepared soil
+                    127 => 13,  // prepared soil -> tilled soil
                     _ => currentTileId
                 };
             }
-
-            if (newTileId != currentTileId)
+            else if (toolName.Contains("watering can"))
             {
-                layer.Tiles[(int)(tileIndex.Y * layer.Width + tileIndex.X)] = newTileId;
+                newTileId = currentTileId switch
+                {
+                    127 => 128, // tilled soil -> watered soil
+                    111 => 112, // dry seeds -> watered seeds 
+                    79 => 80, // dry plant -> watered plant
+                    _ => currentTileId
+                };
+                
+                // If watering planted seeds, update the plant's watered status
+                if (currentTileId == 111) // dry seeds -> watered seeds
+                {
+                    Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
+                    var plant = PlantGrowthSystem.Instance.GetPlantAt((int)tileIndex.X, (int)tileIndex.Y);
+                    if (plant != null)
+                    {
+                        plant.isWatered = true;
+                    }
+                }
             }
         }
 
@@ -323,6 +464,93 @@ namespace Moonlight_Vale.Entity
             {
                 ActionBar[i] = basicTools[i];
             }
+        }
+        
+        public void InitializeSeeds()
+        {
+            var carrotSeed = Seed.CreateSeed("carrot");
+            AddItemToActionBar(carrotSeed, 4);
+            for (int i = 0; i < 10; i++) carrotSeed.IncreaseAmount();
+            Console.WriteLine(carrotSeed.Name);
+            Console.WriteLine(ActionBar[4].Name);
+        }
+        
+        public void AddItemToInventory(Item item, int amount)
+        {
+            if (Inventory.Count < 30)
+            {
+                var existingItem = Inventory.FirstOrDefault(i => i.Name == item.Name);
+                if (existingItem == null)
+                {   
+                    item.Amount = amount;
+                    Inventory.Add(item);
+                    
+                }
+                else
+                {
+                    if (existingItem.Amount + amount <= existingItem.StackSize) //amount will not exceed stack size
+                    {
+                        existingItem.Amount += amount;
+                    }
+                    else
+                    {
+                        var amountToAdd = existingItem.StackSize - existingItem.Amount; //calculate how much can be added
+                        existingItem.Amount += amountToAdd;
+                        
+                        var remainingAmount = amount - amountToAdd;
+                        item.Amount = remainingAmount;
+                        Inventory.Add(item);
+                        
+                    }
+                }
+
+                Console.WriteLine($"Added new item:{item.Name} x {amount} to inventory.");
+            }
+            else
+            {
+                Debug.WriteLine("Inventory is full!");
+            }
+        }
+        
+        public void AddItemToActionBar(Item item, int index)
+        {
+            if(index < 10)
+                if (ActionBar[index] == null)
+                {
+                    ActionBar.Insert(index, item);
+                }
+                else
+                {
+                    Debug.WriteLine("There is already item at the given index");
+                }
+            else Debug.WriteLine("Index out of bounds for action bar!");
+        }
+        
+        public void PrintInventory()
+        {
+            Console.WriteLine("=== PLAYER INVENTORY ===");
+            Console.WriteLine($"Items: {Inventory.Count}/30");
+            Console.WriteLine("------------------------");
+    
+            if (Inventory.Count == 0)
+            {
+                Console.WriteLine("Inventory is empty!");
+                return;
+            }
+    
+            for (int i = 0; i < Inventory.Count; i++)
+            {
+                var item = Inventory[i];
+                if (item != null)
+                {
+                    Console.WriteLine($"[{i:D2}] {item.Name} x {item.Amount})");
+                }
+                else
+                {
+                    Console.WriteLine($"[{i:D2}] NULL");
+                }
+            }
+            Console.WriteLine("========================");
         }
     }
 }
