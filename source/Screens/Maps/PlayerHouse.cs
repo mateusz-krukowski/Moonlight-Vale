@@ -30,19 +30,6 @@ namespace Moonlight_Vale.Screens.Maps
                 121, //another chair
             };
         }
-
-        public void CheckForExitTransition(KeyboardState keyboard, KeyboardState previousKeyboard)
-        {
-            var player = OverworldScreen.Player;
-   
-            if (player.Position.X > 219 && player.Position.X < 265 && player.Position.Y == 366)
-            {
-                if (keyboard.IsKeyDown(Keys.E) && previousKeyboard.IsKeyUp(Keys.E))
-                {
-                    OverworldScreen.SwitchToFarm();
-                }
-            }
-        }
         
         public void DrawMap(SpriteBatch spriteBatch)
         {

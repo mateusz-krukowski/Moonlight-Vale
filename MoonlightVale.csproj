@@ -9,6 +9,7 @@
     <PublishReadyToRun>false</PublishReadyToRun>
     <TieredCompilation>false</TieredCompilation>
     <LangVersion>12.0</LangVersion>
+
     
     <!-- Icon settings -->
     <ApplicationIcon>source\Content\Icons\icon.ico</ApplicationIcon>
@@ -47,6 +48,7 @@
     <MonoGameContentReference Include="source\Content\Content.mgcb" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="source\Content\Data\" />
+    <Folder Include="source\Utils\" />
   </ItemGroup>
+
 </Project>

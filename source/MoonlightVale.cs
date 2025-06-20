@@ -7,6 +7,7 @@ using Myra;
 using Myra.Graphics2D.UI;
 using FontStashSharp;
 using Moonlight_Vale.Screens;
+using Moonlight_Vale.Systems;
 
 /*TODO:
     - collisions between player and tiles (kinda done)
@@ -28,6 +29,7 @@ public class MoonlightVale : Game
     private Desktop _desktop;
     private ScreenManager _screenManager;
     public FontSystem _fontSystem { get; private set; }
+    public SavingSystem SavingSystem => SavingSystem.Instance;
         
     private const byte WIDTH_RATIO = 16 , HEIGHT_RATIO = 9;
 

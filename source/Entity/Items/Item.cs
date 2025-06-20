@@ -6,12 +6,14 @@ namespace Moonlight_Vale.Entity.Items
 {
     public abstract class Item
     {
+        public bool ShouldBeRemoved { get; set; } = false;
         public String Name { get; private set; }
         public String IconPath { get; private set; }
         public String Description { get; private set; }
         public Texture2D Icon { get; private set; }
 
-        public int StackSize { get; private set; }
+        public int StackSize { get; protected set; }
+        public int Amount { get; set; } = 1;
         public int Price { get; private set; }
         public enum ItemType { Tool, Seed, Crop, Food, Miscellaneous }
         public ItemType Type { get; protected set; }    
@@ -22,7 +24,7 @@ namespace Moonlight_Vale.Entity.Items
             Description = description;
             StackSize = stackSize;
             Price = price;
-            IconPath = iconPath;
+            IconPath = @"Icons\" +iconPath;
         }
 
         public virtual void LoadContent(ContentManager content)
@@ -46,6 +48,19 @@ namespace Moonlight_Vale.Entity.Items
                     }
                 }
             }
+        }
+        
+        public void IncreaseAmount()
+        {
+            if (Amount < StackSize)
+                Amount++;
+        }
+    
+        public void DecreaseAmount()
+        {
+            if (Amount > 1 )
+                Amount--;
+            if (Amount == 0) ShouldBeRemoved = true;
         }
     }
 }

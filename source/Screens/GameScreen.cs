@@ -8,7 +8,7 @@ namespace Moonlight_Vale.Screens
 {
     public abstract class GameScreen 
     {
-        protected MoonlightVale game;
+        public MoonlightVale game;
         protected ScreenManager screenManager;
         protected ContentManager content;
         protected GraphicsDevice graphicsDevice;

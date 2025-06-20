@@ -1,10 +1,10 @@
-﻿// HudManager.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FontStashSharp;
 using FontStashSharp.RichText;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Moonlight_Vale.Systems;
 using Myra.Graphics2D;
@@ -24,7 +24,8 @@ namespace Moonlight_Vale.UI
         private HorizontalStackPanel utilitiesBar;
         private VerticalStackPanel inGameMenu;
         private Window settingsWindow;
-        private Window backpackWindow;
+        private BackpackWindow backpackWindow; // Using new BackpackWindow class
+        private Label tooltipLabel;
 
         public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
         public MouseState Mouse => overworldScreen.previousMouseState;
@@ -54,15 +55,35 @@ namespace Moonlight_Vale.UI
             itemBar = CreateItemBar();
             utilitiesBar = CreateUtilitiesBar();
             inGameMenu = CreateInGameMenu();
-            CreateBackpackWindow();
+            backpackWindow = new BackpackWindow(overworldScreen); // Create BackpackWindow
+            CreateTooltip();
 
+            // Add widgets in proper Z-order (last added renders on top)
             hud.Widgets.Add(timeLabel);
             hud.Widgets.Add(itemBar);
             hud.Widgets.Add(utilitiesBar);
-            hud.Widgets.Add(inGameMenu);
+            hud.Widgets.Add(backpackWindow); // Add BackpackWindow
+            hud.Widgets.Add(inGameMenu); // Add inGameMenu AFTER backpack so it renders on top
+            hud.Widgets.Add(tooltipLabel); // Add tooltip LAST so it renders on top of everything
 
             Desktop.Root = hud;
-            
+        }
+
+        public void Update()
+        {
+            UpdateTooltip();
+            backpackWindow.Update(); // Update backpack window
+            EnsureTooltipOnTop(); // Ensure tooltip stays on top
+        }
+
+        private void EnsureTooltipOnTop()
+        {
+            // If tooltip is visible but not the last widget, move it to the end
+            if (tooltipLabel.Visible && hud.Widgets.IndexOf(tooltipLabel) != hud.Widgets.Count - 1)
+            {
+                hud.Widgets.Remove(tooltipLabel);
+                hud.Widgets.Add(tooltipLabel);
+            }
         }
 
         public void UpdateVisibility(bool hudVisible, bool menuVisible)
@@ -81,9 +102,15 @@ namespace Moonlight_Vale.UI
             for (int i = 0; i < itemSlots.Count; i++)
             {
                 if (i == selectedIndex)
+                {
                     itemSlots[i].Border = new SolidBrush(Color.Green);
+                    itemSlots[i].BorderThickness = new Thickness(6);
+                }
                 else
+                {
                     itemSlots[i].Border = new SolidBrush(Color.White);
+                    itemSlots[i].BorderThickness = new Thickness(2);
+                }
             }
         }
 
@@ -142,6 +169,82 @@ namespace Moonlight_Vale.UI
             return false;
         }
 
+        private void CreateTooltip()
+        {
+            // Create simple tooltip label
+            tooltipLabel = new Label
+            {
+                Font = FontSystem.GetFont(2),
+                TextColor = Color.White,
+                Background = new SolidBrush(new Color(60, 60, 60, 200)), // Dark gray semi-transparent background
+                Padding = new Thickness(6, 18, 6, 0),
+                Visible = false,
+                Height = 30  // Set fixed height
+            };
+        }
+
+        public void UpdateTooltip()
+        {
+            var mousePosition = Mouse.Position;
+            var player = overworldScreen.Player;
+            
+            // Check if mouse is hovering over any action bar item slot with an item
+            for (int i = 0; i < itemSlots.Count; i++)
+            {
+                var slot = itemSlots[i];
+                var item = player.ActionBar[i];
+                
+                var hitTest = slot.HitTest(mousePosition);
+
+                if (item != null && !string.IsNullOrEmpty(item.Name) && hitTest != null)
+                {
+                    // Show tooltip at cursor position
+                    tooltipLabel.Text = (item is Plant)? item.Name + $" ({item.Amount})":item.Name; //amount for plants!
+                    tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                    tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                    tooltipLabel.Top = mousePosition.Y - 35;
+                    tooltipLabel.Visible = true;
+                    
+                    return; // Important: exit here so tooltip doesn't get hidden below
+                }
+            }
+
+            // Check if mouse is hovering over any backpack inventory slot with an item
+            if (backpackWindow.Visible)
+            {
+                var inventorySlots = backpackWindow.GetInventorySlots();
+                for (int i = 0; i < inventorySlots.Count; i++)
+                {
+                    var slot = inventorySlots[i];
+                    
+                    // Check if there's an item at this index
+                    if (i < player.Inventory.Count && player.Inventory[i] != null)
+                    {
+                        var item = player.Inventory[i];
+                        var hitTest = slot.HitTest(mousePosition);
+
+                        if (!string.IsNullOrEmpty(item.Name) && hitTest != null)
+                        {
+                            // Show tooltip at cursor position
+                            tooltipLabel.Text = (item is Plant) ? item.Name + $" ({item.Amount})" : $"{item.Name} ({item.Amount})";
+                            tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                            tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                            tooltipLabel.Top = mousePosition.Y - 35;
+                            tooltipLabel.Visible = true;
+                            
+                            return; // Exit here so tooltip doesn't get hidden below
+                        }
+                    }
+                }
+            }
+
+            // Hide tooltip if not hovering over any item (only reached if no return above)
+            if (tooltipLabel.Visible)
+            {
+                tooltipLabel.Visible = false;
+            }
+        }
+
         private Label CreateTimeWidget()
         {
             return new Label
@@ -180,7 +283,7 @@ namespace Moonlight_Vale.UI
                     Width = 64,
                     Height = 64,
                     Background = new SolidBrush(new Color(142, 105, 67)),
-                    BorderThickness = new Thickness(4),
+                    BorderThickness = new Thickness(2),
                     Border = new SolidBrush(Color.White)
                 };
 
@@ -285,26 +388,6 @@ namespace Moonlight_Vale.UI
             settingsWindow.Visible = true;
         }
 
-        public void CreateBackpackWindow()
-        {
-            if (backpackWindow == null)
-            {
-                backpackWindow = new Window()
-                {
-                    Title = "",
-                    Width = 800,
-                    Height = 600,
-                    Background = new SolidBrush(new Color(142, 105, 67)),
-                    Padding = new Thickness(10),
-                    HorizontalAlignment = 0,
-                    VerticalAlignment = 0,
-                    Visible = false
-                };
-                backpackWindow.Closed += (s, e) => backpackWindow = null;
-                hud.Widgets.Add(backpackWindow);
-            }
-        }
-
         public void ToggleSettingsWindow()
         {
             if (settingsWindow == null)
@@ -319,14 +402,28 @@ namespace Moonlight_Vale.UI
 
         public void ToggleBackpackWindow()
         {
-            if (backpackWindow == null)
+            // Check if window was removed from UI tree (e.g., by clicking X)
+            if (backpackWindow.Parent == null)
             {
-                CreateBackpackWindow();
+                // Window was removed, re-add it to HUD in correct Z-order
+                // Find inGameMenu index and insert backpack before it
+                int inGameMenuIndex = hud.Widgets.IndexOf(inGameMenu);
+                if (inGameMenuIndex >= 0)
+                {
+                    hud.Widgets.Insert(inGameMenuIndex, backpackWindow);
+                }
+                else
+                {
+                    // Fallback: add at end minus 1 (before tooltip)
+                    int insertIndex = Math.Max(0, hud.Widgets.Count - 1);
+                    hud.Widgets.Insert(insertIndex, backpackWindow);
+                }
                 backpackWindow.Visible = true;
             }
             else
             {
-                backpackWindow.Visible = !backpackWindow.Visible;
+                // Window is still in UI tree, just toggle visibility
+                backpackWindow.Toggle();
             }
         }
     }

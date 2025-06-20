@@ -1,0 +1,122 @@
+﻿[
+  {
+    "id": 1,
+    "name": "carrot",
+    "farmingLevelRequired": 1,
+    "daysToGrow": 2,
+    "seedPrice": 10,
+    "cropPrice": 50,
+    "pathToSeedIcon": "Seeds/carrot_seed",
+    "pathToCropIcon": "Crops/carrot_crop"
+  },
+  {
+    "id": 2,
+    "name": "onion",
+    "farmingLevelRequired": 2,
+    "daysToGrow": 3,
+    "seedPrice": 15,
+    "cropPrice": 60,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 3,
+    "name": "garlic",
+    "farmingLevelRequired": 4,
+    "daysToGrow": 3,
+    "seedPrice": 22,
+    "cropPrice": 80,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 4,
+    "name": "radish",
+    "farmingLevelRequired": 1,
+    "daysToGrow": 2,
+    "seedPrice": 8,
+    "cropPrice": 40,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 5,
+    "name": "parsnip",
+    "farmingLevelRequired": 2,
+    "daysToGrow": 4,
+    "seedPrice": 14,
+    "cropPrice": 55,
+    "pathToSeedIcon": "Seeds/parsnip_seed",
+    "pathToCropIcon": "Crops/parsnip_crop"
+  },
+  {
+    "id": 6,
+    "name": "potato",
+    "farmingLevelRequired": 2,
+    "daysToGrow": 6,
+    "seedPrice": 15,
+    "cropPrice": 58,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 7,
+    "name": "cabbage",
+    "farmingLevelRequired": 5,
+    "daysToGrow": 8,
+    "seedPrice": 25,
+    "cropPrice": 95,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 8,
+    "name": "leek",
+    "farmingLevelRequired": 3,
+    "daysToGrow": 7,
+    "seedPrice": 18,
+    "cropPrice": 70,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 9,
+    "name": "celery",
+    "farmingLevelRequired": 4,
+    "daysToGrow": 7,
+    "seedPrice": 20,
+    "cropPrice": 75,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 10,
+    "name": "cucumber",
+    "farmingLevelRequired": 3,
+    "daysToGrow": 6,
+    "seedPrice": 17,
+    "cropPrice": 65,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 11,
+    "name": "lettuce",
+    "farmingLevelRequired": 1,
+    "daysToGrow": 4,
+    "seedPrice": 9,
+    "cropPrice": 42,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  },
+  {
+    "id": 12,
+    "name": "turnip",
+    "farmingLevelRequired": 1,
+    "daysToGrow": 5,
+    "seedPrice": 10,
+    "cropPrice": 48,
+    "pathToSeedIcon": "",
+    "pathToCropIcon": ""
+  }
+]

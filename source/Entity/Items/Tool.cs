@@ -26,7 +26,7 @@ namespace Moonlight_Vale.Entity.Items
                 new Tool(
                     name: "Shovel",
                     description: "Used for digging and tilling soil",
-                    iconPath: @"Icons\Tools\shovel",
+                    iconPath: @"Tools\shovel",
                     stackSize: 1,
                     price: 100,
                     durability: 50,
@@ -35,7 +35,7 @@ namespace Moonlight_Vale.Entity.Items
                 new Tool(
                     name: "Hoe",
                     description: "Used for preparing soil for planting",
-                    iconPath: @"Icons\Tools\hoe",
+                    iconPath: @"Tools\hoe",
                     stackSize: 1,
                     price: 80,
                     durability: 60,
@@ -44,7 +44,7 @@ namespace Moonlight_Vale.Entity.Items
                 new Tool(
                     name: "Watering Can",
                     description: "Used for watering plants",
-                    iconPath: @"Icons\Tools\watering_can",
+                    iconPath: @"Tools\watering_can",
                     stackSize: 1,
                     price: 90,
                     durability: 100,
@@ -53,7 +53,7 @@ namespace Moonlight_Vale.Entity.Items
                 new Tool(
                     name: "Scythe",
                     description: "Used for harvesting crops",
-                    iconPath: @"Icons\Tools\scythe",
+                    iconPath: @"Tools\scythe",
                     stackSize: 1,
                     price: 120,
                     durability: 45,
