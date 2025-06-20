@@ -27,6 +27,9 @@ namespace Moonlight_Vale.Entity
         private float _toolCooldownTimer = 0f;
 
         private Texture2D spriteSheet;
+        
+        // ContentManager reference for loading item content
+        private ContentManager _contentManager;
 
         public SpriteEffects SpriteEffect { get; private set; } = SpriteEffects.None;
         public int Frame { get; private set; } = 1;
@@ -89,6 +92,9 @@ namespace Moonlight_Vale.Entity
 
         public void LoadContent(ContentManager content, string spriteSheetPath)
         {
+            // Store ContentManager reference for later use
+            _contentManager = content;
+            
             spriteSheet = content.Load<Texture2D>(spriteSheetPath);
             
 
@@ -360,6 +366,12 @@ namespace Moonlight_Vale.Entity
                     // Create crop with plant name
                     var crop = Crop.CreateCrop(plant.Name); // Using Name instead of Type
                     
+                    // Load content for the newly created crop item
+                    if (_contentManager != null)
+                    {
+                        crop.LoadContent(_contentManager);
+                    }
+                    
                     // Add to inventory
                     AddItemToInventory(crop, amountToHarvest);
                     
@@ -485,6 +497,11 @@ namespace Moonlight_Vale.Entity
                     item.Amount = amount;
                     Inventory.Add(item);
                     
+                    // Load content for newly added item if ContentManager is available
+                    if (_contentManager != null)
+                    {
+                        item.LoadContent(_contentManager);
+                    }
                 }
                 else
                 {
@@ -501,6 +518,11 @@ namespace Moonlight_Vale.Entity
                         item.Amount = remainingAmount;
                         Inventory.Add(item);
                         
+                        // Load content for newly added item if ContentManager is available
+                        if (_contentManager != null)
+                        {
+                            item.LoadContent(_contentManager);
+                        }
                     }
                 }
 
