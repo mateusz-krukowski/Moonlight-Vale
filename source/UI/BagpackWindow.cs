@@ -284,7 +284,6 @@ namespace Moonlight_Vale.UI
                 UpdateInventorySlots();
             }
         }
-
         public List<Panel> GetInventorySlots()
         {
             return inventorySlots;
