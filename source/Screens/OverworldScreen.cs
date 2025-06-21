@@ -149,6 +149,7 @@ namespace Moonlight_Vale.Screens
                 Player.PrintInventory();
             }
 
+            HudManager.Update();
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);
             HudManager.UpdateVisibility(isHUDActive, isInGameMenuActive);

@@ -72,7 +72,7 @@ namespace Moonlight_Vale.UI
         public void Update()
         {
             UpdateTooltip();
-            backpackWindow.Update(); // Update backpack window
+            backpackWindow.Update(); // This now handles drag and drop internally
             EnsureTooltipOnTop(); // Ensure tooltip stays on top
         }
 
@@ -139,6 +139,84 @@ namespace Moonlight_Vale.UI
             }
         }
 
+        public void UpdateTooltip()
+        {
+            var mousePosition = overworldScreen.previousMouseState.Position;
+            var player = overworldScreen.Player;
+            
+            // Don't show tooltips while dragging
+            if (backpackWindow.IsDragging())
+            {
+                if (tooltipLabel.Visible)
+                {
+                    tooltipLabel.Visible = false;
+                }
+                return;
+            }
+            
+            // Check if mouse is hovering over any action bar item slot with an item
+            for (int i = 0; i < itemSlots.Count; i++)
+            {
+                var slot = itemSlots[i];
+                var item = player.ActionBar[i];
+                
+                // Simple bounds check for action bar slots
+                var slotBounds = slot.Bounds;
+                if (item != null && !string.IsNullOrEmpty(item.Name) && 
+                    slotBounds.Contains(mousePosition.X - slot.Left, mousePosition.Y - slot.Top))
+                {
+                    // Show tooltip at cursor position
+                    tooltipLabel.Text = (item is Plant)? item.Name + $" ({item.Amount})":item.Name;
+                    tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                    tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                    tooltipLabel.Top = mousePosition.Y - 35;
+                    tooltipLabel.Visible = true;
+                    
+                    return;
+                }
+            }
+
+            // Check if mouse is hovering over any backpack inventory slot with an item
+            if (backpackWindow.Visible)
+            {
+                var inventorySlots = backpackWindow.GetInventorySlots();
+                for (int i = 0; i < inventorySlots.Count; i++)
+                {
+                    var slot = inventorySlots[i];
+                    
+                    // Check if there's an item at this index
+                    if (i < player.Inventory.Count && player.Inventory[i] != null)
+                    {
+                        var item = player.Inventory[i];
+                        var slotBounds = slot.Bounds;
+                        
+                        // Simple bounds check adjusted for window position
+                        var adjustedX = mousePosition.X - backpackWindow.Left - backpackWindow.Padding.Left;
+                        var adjustedY = mousePosition.Y - backpackWindow.Top - backpackWindow.Padding.Top - 30; // title bar
+                        
+                        if (!string.IsNullOrEmpty(item.Name) && 
+                            slotBounds.Contains(adjustedX, adjustedY))
+                        {
+                            // Show tooltip at cursor position
+                            tooltipLabel.Text = (item is Plant) ? item.Name + $" ({item.Amount})" : $"{item.Name} ({item.Amount})";
+                            tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                            tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                            tooltipLabel.Top = mousePosition.Y - 35;
+                            tooltipLabel.Visible = true;
+                            
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Hide tooltip if not hovering over any item
+            if (tooltipLabel.Visible)
+            {
+                tooltipLabel.Visible = false;
+            }
+        }
+
         public void Draw()
         {
             Desktop.Render();
@@ -155,13 +233,13 @@ namespace Moonlight_Vale.UI
                 {
                     foreach (var child in inGameMenu.Widgets)
                     {
-                        if (child.Visible && child.HitTest(mousePosition) != null)
+                        if (child.Visible && child.Bounds.Contains(mousePosition))
                             return true;
                     }
                 }
                 else
                 {
-                    if (widget.HitTest(mousePosition) != null)
+                    if (widget.Bounds.Contains(mousePosition))
                         return true;
                 }
             }
@@ -181,68 +259,6 @@ namespace Moonlight_Vale.UI
                 Visible = false,
                 Height = 30  // Set fixed height
             };
-        }
-
-        public void UpdateTooltip()
-        {
-            var mousePosition = Mouse.Position;
-            var player = overworldScreen.Player;
-            
-            // Check if mouse is hovering over any action bar item slot with an item
-            for (int i = 0; i < itemSlots.Count; i++)
-            {
-                var slot = itemSlots[i];
-                var item = player.ActionBar[i];
-                
-                var hitTest = slot.HitTest(mousePosition);
-
-                if (item != null && !string.IsNullOrEmpty(item.Name) && hitTest != null)
-                {
-                    // Show tooltip at cursor position
-                    tooltipLabel.Text = (item is Plant)? item.Name + $" ({item.Amount})":item.Name; //amount for plants!
-                    tooltipLabel.Width = tooltipLabel.Text.Length * 12;
-                    tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
-                    tooltipLabel.Top = mousePosition.Y - 35;
-                    tooltipLabel.Visible = true;
-                    
-                    return; // Important: exit here so tooltip doesn't get hidden below
-                }
-            }
-
-            // Check if mouse is hovering over any backpack inventory slot with an item
-            if (backpackWindow.Visible)
-            {
-                var inventorySlots = backpackWindow.GetInventorySlots();
-                for (int i = 0; i < inventorySlots.Count; i++)
-                {
-                    var slot = inventorySlots[i];
-                    
-                    // Check if there's an item at this index
-                    if (i < player.Inventory.Count && player.Inventory[i] != null)
-                    {
-                        var item = player.Inventory[i];
-                        var hitTest = slot.HitTest(mousePosition);
-
-                        if (!string.IsNullOrEmpty(item.Name) && hitTest != null)
-                        {
-                            // Show tooltip at cursor position
-                            tooltipLabel.Text = (item is Plant) ? item.Name + $" ({item.Amount})" : $"{item.Name} ({item.Amount})";
-                            tooltipLabel.Width = tooltipLabel.Text.Length * 12;
-                            tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
-                            tooltipLabel.Top = mousePosition.Y - 35;
-                            tooltipLabel.Visible = true;
-                            
-                            return; // Exit here so tooltip doesn't get hidden below
-                        }
-                    }
-                }
-            }
-
-            // Hide tooltip if not hovering over any item (only reached if no return above)
-            if (tooltipLabel.Visible)
-            {
-                tooltipLabel.Visible = false;
-            }
         }
 
         private Label CreateTimeWidget()
@@ -424,6 +440,24 @@ namespace Moonlight_Vale.UI
             {
                 // Window is still in UI tree, just toggle visibility
                 backpackWindow.Toggle();
+            }
+        }
+
+        // Methods for drag and drop icon management
+        public void AddDragIcon(Panel dragIcon)
+        {
+            if (dragIcon != null)
+            {
+                // Add drag icon as the topmost widget (after tooltip)
+                hud.Widgets.Add(dragIcon);
+            }
+        }
+
+        public void RemoveDragIcon(Panel dragIcon)
+        {
+            if (dragIcon != null && hud.Widgets.Contains(dragIcon))
+            {
+                hud.Widgets.Remove(dragIcon);
             }
         }
     }
