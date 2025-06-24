@@ -4,9 +4,9 @@ using Microsoft.Xna.Framework;
 
 namespace Moonlight_Vale.Systems
 {
-    public class TimeSystem
+    public class TimeSystem : IDisposable
     {
-        //1h in game = 45s in real life
+        // 1h in game = 45s in real life
         
         // IMPORTANT: Day logic explanation:
         // - Formal day changes at midnight (00:00) - CurrentDay++
@@ -14,7 +14,39 @@ namespace Moonlight_Vale.Systems
         // - Sleep mechanics work across midnight (22:00-02:00 is one night cycle)
         // - Official new day starts at 6:00 AM with messages and plant growth
         
-        public static TimeSystem Instance { get; } = new TimeSystem();
+        private static TimeSystem _instance;
+        private static readonly object _lock = new object();
+        
+        public static TimeSystem Instance 
+        { 
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_instance == null)
+                        {
+                            _instance = new TimeSystem();
+                        }
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        // Public method to check if instance exists
+        public static bool HasInstance => _instance != null;
+
+        // Public method to dispose and recreate instance
+        public static void DisposeAndRecreate()
+        {
+            lock (_lock)
+            {
+                _instance?.Dispose();
+                _instance = null;
+            }
+        }
 
         public enum SleepType
         {
@@ -33,6 +65,10 @@ namespace Moonlight_Vale.Systems
 
         private const int RealMillisecondsPerGameMinute = 750; // 45 seconds per game hour / 60 minutes = 750ms per minute
         private Thread _timeThread;
+        private volatile bool _disposed = false;
+        private volatile bool _stopRequested = false;
+        
+        // Game state variables
         private bool _hasCollapsedFromExhaustion = false;
         private bool _hasSleptTonight = false; // Reset when new day officially starts (6 AM)
         private bool _newMorningQueued = false;
@@ -49,25 +85,88 @@ namespace Moonlight_Vale.Systems
 
         public event Action<Vector2> PlayerCollapsedFromExhaustion;
 
-        private TimeSystem() { }
+        private TimeSystem() 
+        {
+            ResetToDefaults();
+        }
+
+        private void ResetToDefaults()
+        {
+            CurrentDay = 1;
+            CurrentHour = 6;
+            CurrentMinute = 0;
+            IsPlayerSleeping = false;
+            CanPlayerCollapseFromExhaustion = true;
+            CurrentSleepType = null;
+            _hasCollapsedFromExhaustion = false;
+            _hasSleptTonight = false;
+            _newMorningQueued = false;
+            _stopRequested = false;
+        }
 
         public void Start()
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TimeSystem));
+                
             if (IsRunning) return;
 
+            _stopRequested = false;
             IsRunning = true;
-            _timeThread = new Thread(TimeLoop) { IsBackground = true };
+            _timeThread = new Thread(TimeLoop) 
+            { 
+                IsBackground = true,
+                Name = "TimeSystem_Worker"
+            };
             _timeThread.Start();
         }
 
         public void Stop()
         {
+            if (!IsRunning) return;
+            
+            _stopRequested = true;
             IsRunning = false;
-            _timeThread?.Join();
+            
+            // Wait for thread to finish gracefully with timeout
+            if (_timeThread != null && _timeThread.IsAlive)
+            {
+                if (!_timeThread.Join(TimeSpan.FromSeconds(2)))
+                {
+                    // If thread doesn't stop gracefully, force abort (last resort)
+                    Console.WriteLine("Warning: TimeSystem thread didn't stop gracefully, forcing abort");
+                    _timeThread.Abort();
+                }
+                _timeThread = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            
+            Stop();
+            
+            // Clear all events to prevent memory leaks
+            PlayerCollapsedFromExhaustion = null;
+            
+            _disposed = true;
+            
+            // Remove from singleton
+            lock (_lock)
+            {
+                if (_instance == this)
+                {
+                    _instance = null;
+                }
+            }
         }
 
         public void StartSleeping()
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TimeSystem));
+                
             if (IsPlayerSleeping)
                 return;
 
@@ -88,54 +187,74 @@ namespace Moonlight_Vale.Systems
 
         private void TimeLoop()
         {
-            while (IsRunning)
+            try
             {
-                Thread.Sleep(RealMillisecondsPerGameMinute);
-
-                // Check for exhaustion collapse after 2 AM BUT BEFORE 6 AM ONLY if:
-                // - Player can collapse from exhaustion is enabled
-                // - Player hasn't slept during this night cycle (since last 6 AM)
-                // - Player isn't currently sleeping
-                // - Player hasn't already collapsed during this night cycle
-                if (CurrentHour >= 2 && CurrentHour < 6 && !IsPlayerSleeping && !_hasCollapsedFromExhaustion && 
-                    !_hasSleptTonight && CanPlayerCollapseFromExhaustion)
+                while (!_stopRequested && !_disposed)
                 {
-                    CollapseFromExhaustion();
-                    continue;
-                }
-
-                // If player is sleeping – proceed to morning
-                if (IsPlayerSleeping && !_newMorningQueued)
-                {
-                    BeginNewMorning();
-                    continue;
-                }
-
-                CurrentMinute++;
-
-                if (CurrentMinute > 59)
-                {
-                    CurrentMinute = 0;
-                    CurrentHour++;
-
-                    // Midnight - advance day but don't reset night flags yet
-                    if (CurrentHour >= 24)
-                    {
-                        CurrentHour = 0;
-                        CurrentDay++;
-                    }
+                    Thread.Sleep(RealMillisecondsPerGameMinute);
                     
-                    // 6 AM - Official start of new day, reset night flags and show day messages
-                    if (CurrentHour == 6 && !_newMorningQueued)
+                    if (_stopRequested || _disposed) break;
+
+                    // Check for exhaustion collapse after 2 AM BUT BEFORE 6 AM ONLY if:
+                    // - Player can collapse from exhaustion is enabled
+                    // - Player hasn't slept during this night cycle (since last 6 AM)
+                    // - Player isn't currently sleeping
+                    // - Player hasn't already collapsed during this night cycle
+                    if (CurrentHour >= 2 && CurrentHour < 6 && !IsPlayerSleeping && !_hasCollapsedFromExhaustion && 
+                        !_hasSleptTonight && CanPlayerCollapseFromExhaustion)
+                    {
+                        CollapseFromExhaustion();
+                        continue;
+                    }
+
+                    // If player is sleeping – proceed to morning
+                    if (IsPlayerSleeping && !_newMorningQueued)
                     {
                         BeginNewMorning();
+                        continue;
+                    }
+
+                    CurrentMinute++;
+
+                    if (CurrentMinute > 59)
+                    {
+                        CurrentMinute = 0;
+                        CurrentHour++;
+
+                        // Midnight - advance day but don't reset night flags yet
+                        if (CurrentHour >= 24)
+                        {
+                            CurrentHour = 0;
+                            CurrentDay++;
+                        }
+                        
+                        // 6 AM - Official start of new day, reset night flags and show day messages
+                        if (CurrentHour == 6 && !_newMorningQueued)
+                        {
+                            BeginNewMorning();
+                        }
                     }
                 }
+            }
+            catch (ThreadAbortException)
+            {
+                // Thread was aborted, clean exit
+                Console.WriteLine("TimeSystem thread was aborted");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"TimeSystem thread error: {ex.Message}");
+            }
+            finally
+            {
+                IsRunning = false;
             }
         }
 
         private void CollapseFromExhaustion()
         {
+            if (_disposed) return;
+            
             Console.WriteLine($"Player collapsed from exhaustion at {CurrentHour:D2}:{CurrentMinute:D2}!");
             
             _hasCollapsedFromExhaustion = true;
@@ -151,13 +270,19 @@ namespace Moonlight_Vale.Systems
 
         public void BeginNewMorning()
         {
+            if (_disposed) return;
+            
             _newMorningQueued = true;
             if (CurrentHour > 0) //add later && currentHour <2 
             {
                 CurrentDay++;
-                
             }
-            PlantGrowthSystem.Instance.CheckPlantsGrowthStage();
+            
+            // Check if PlantGrowthSystem exists before calling it
+            if (PlantGrowthSystem.Instance != null)
+            {
+                PlantGrowthSystem.Instance.CheckPlantsGrowthStage();
+            }
 
             // Handle different sleep scenarios
             switch (CurrentSleepType)
@@ -204,6 +329,9 @@ namespace Moonlight_Vale.Systems
 
         public void SetDay(int dayNumber)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TimeSystem));
+                
             if (dayNumber < 1)
                 throw new ArgumentException("Day must be >= 1");
 
@@ -220,6 +348,9 @@ namespace Moonlight_Vale.Systems
 
         public void SetTime(int hour, int minute)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TimeSystem));
+                
             if (hour < 0 || hour > 23)
                 throw new ArgumentException("Hour must be between 0 and 23");
             if (minute < 0 || minute > 59)
@@ -248,6 +379,16 @@ namespace Moonlight_Vale.Systems
                 >= 18 and < 22  => TimePeriod.Evening,   // 18:00-21:59
                 _               => TimePeriod.Night      // 22:00-5:59
             };
+        }
+
+        // Reset the system to default state without disposing
+        public void Reset()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TimeSystem));
+                
+            Stop();
+            ResetToDefaults();
         }
     }
 }

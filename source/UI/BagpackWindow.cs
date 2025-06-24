@@ -18,14 +18,6 @@ namespace Moonlight_Vale.UI
         private List<Panel> inventorySlots;
         private Label goldLabel;
 
-        // Drag and Drop state
-        private bool isDragging = false;
-        private int draggedItemIndex = -1;
-        private Item draggedItem = null;
-        private Panel draggedIcon = null; // Visual representation during drag
-        private MouseState previousMouseState;
-        private Point dragStartPosition;
-
         public BackpackWindow(OverworldScreen overworldScreen)
         {
             this.overworldScreen = overworldScreen;
@@ -49,234 +41,17 @@ namespace Moonlight_Vale.UI
         public void Initialize()
         {
             CreateInventoryGrid();
-            previousMouseState = Mouse.GetState();
         }
 
         public void Update()
         {
-            var currentMouseState = Mouse.GetState();
-            
-            // Handle drag and drop logic
-            HandleDragAndDrop(currentMouseState);
-            
-            // Always update inventory slots
+            // Just update inventory slots - drag & drop is handled by HudManager now
             UpdateInventorySlots();
-            
-            previousMouseState = currentMouseState;
-        }
-
-        private void HandleDragAndDrop(MouseState currentMouseState)
-        {
-            var mousePosition = currentMouseState.Position;
-            
-            // Start drag detection
-            if (!isDragging && 
-                currentMouseState.LeftButton == ButtonState.Pressed && 
-                previousMouseState.LeftButton == ButtonState.Released &&
-                Visible)
-            {
-                int slotIndex = GetSlotIndexAtMousePosition(mousePosition);
-                Console.WriteLine($"Mouse click at {mousePosition}, slot index: {slotIndex}");
-                
-                if (slotIndex != -1)
-                {
-                    var player = overworldScreen.Player;
-                    if (slotIndex < player.Inventory.Count && player.Inventory[slotIndex] != null)
-                    {
-                        StartDrag(slotIndex, player.Inventory[slotIndex], mousePosition);
-                    }
-                }
-            }
-            
-            // Update drag position
-            if (isDragging && draggedIcon != null)
-            {
-                // Update dragged icon position to follow mouse
-                draggedIcon.Left = mousePosition.X - 32; // Center the 64x64 icon on cursor
-                draggedIcon.Top = mousePosition.Y - 32;
-            }
-            
-            // End drag detection
-            if (isDragging && 
-                currentMouseState.LeftButton == ButtonState.Released && 
-                previousMouseState.LeftButton == ButtonState.Pressed)
-            {
-                EndDrag(mousePosition);
-            }
-        }
-
-        private int GetSlotIndexAtMousePosition(Point mousePosition)
-        {
-            if (!Visible) return -1;
-            
-            // Calculate relative position within the window
-            int relativeX = mousePosition.X - this.Left - this.Padding.Left;
-            int relativeY = mousePosition.Y - this.Top - this.Padding.Top - 30; // Account for title bar
-            
-            // Account for main panel and grid positioning
-            int gridStartX = 65; // Approximate offset to grid start
-            int gridStartY = 10;  // Approximate offset to grid start
-            
-            relativeX -= gridStartX;
-            relativeY -= gridStartY;
-            
-            // Calculate slot size including spacing
-            int slotSize = 64;
-            int spacing = 4;
-            int slotWithSpacing = slotSize + spacing;
-            
-            // Calculate grid position
-            int col = relativeX / slotWithSpacing;
-            int row = relativeY / slotWithSpacing;
-            
-            // Check if click is within valid bounds
-            if (col >= 0 && col < 6 && row >= 0 && row < 5)
-            {
-                // Check if click is within the actual slot (not spacing)
-                int slotLocalX = relativeX % slotWithSpacing;
-                int slotLocalY = relativeY % slotWithSpacing;
-                
-                if (slotLocalX <= slotSize && slotLocalY <= slotSize)
-                {
-                    int slotIndex = row * 6 + col;
-                    Console.WriteLine($"Calculated slot: row={row}, col={col}, index={slotIndex}");
-                    return slotIndex;
-                }
-            }
-            
-            return -1;
-        }
-
-        private void StartDrag(int slotIndex, Item item, Point mousePosition)
-        {
-            if (item == null) return;
-            
-            isDragging = true;
-            draggedItemIndex = slotIndex;
-            draggedItem = item;
-            dragStartPosition = mousePosition;
-            
-            // Create visual drag icon
-            CreateDragIcon(item, mousePosition);
-            
-            Console.WriteLine($"Started dragging: {item.Name} from slot {slotIndex}");
-        }
-
-        private void CreateDragIcon(Item item, Point mousePosition)
-        {
-            if (item?.Icon == null) return;
-            
-            // Create dragged icon panel
-            draggedIcon = new Panel
-            {
-                Width = 64,
-                Height = 64,
-                Left = mousePosition.X - 32,
-                Top = mousePosition.Y - 32,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top,
-                Background = new SolidBrush(Color.Transparent),
-                BorderThickness = new Thickness(2),
-                Border = new SolidBrush(Color.Yellow)
-            };
-            
-            // Add item image to dragged icon
-            var itemImage = new Image
-            {
-                Renderable = new TextureRegion(item.Icon),
-                Width = 60,
-                Height = 60,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            
-            draggedIcon.Widgets.Add(itemImage);
-            
-            // Add amount label if item is stackable
-            if (item.Amount > 1)
-            {
-                var amountLabel = new Label
-                {
-                    Text = item.Amount.ToString(),
-                    Font = overworldScreen.FontSystem.GetFont(1.5f),
-                    TextColor = Color.White,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Bottom,
-                    Margin = new Thickness(0, 0, 2, 2)
-                };
-                draggedIcon.Widgets.Add(amountLabel);
-            }
-            
-            // Add to the desktop root so it appears above everything
-            overworldScreen.Desktop.Widgets.Add(draggedIcon);
-        }
-
-        private void EndDrag(Point mousePosition)
-        {
-            if (!isDragging) return;
-            
-            // Find target slot
-            int targetSlotIndex = GetSlotIndexAtMousePosition(mousePosition);
-            
-            Console.WriteLine($"Ending drag at {mousePosition}, target slot: {targetSlotIndex}");
-            
-            if (targetSlotIndex != -1 && targetSlotIndex != draggedItemIndex)
-            {
-                // Perform item swap
-                SwapItems(draggedItemIndex, targetSlotIndex);
-                Console.WriteLine($"Swapped items: slot {draggedItemIndex} <-> slot {targetSlotIndex}");
-            }
-            else
-            {
-                Console.WriteLine($"Drag cancelled - invalid target or same slot");
-            }
-            
-            // Clean up drag state
-            CleanupDrag();
-        }
-
-        private void CleanupDrag()
-        {
-            if (draggedIcon != null)
-            {
-                // Remove dragged icon from desktop
-                overworldScreen.Desktop.Widgets.Remove(draggedIcon);
-                draggedIcon = null;
-            }
-            
-            isDragging = false;
-            draggedItemIndex = -1;
-            draggedItem = null;
-        }
-
-        private void SwapItems(int fromIndex, int toIndex)
-        {
-            var player = overworldScreen.Player;
-            
-            // Ensure inventory has enough slots
-            while (player.Inventory.Count <= Math.Max(fromIndex, toIndex))
-            {
-                player.Inventory.Add(null);
-            }
-            
-            // Perform the swap in player's inventory
-            var temp = player.Inventory[fromIndex];
-            player.Inventory[fromIndex] = player.Inventory[toIndex];
-            player.Inventory[toIndex] = temp;
-            
-            Console.WriteLine($"Inventory updated: [{fromIndex}]={player.Inventory[fromIndex]?.Name ?? "null"}, " +
-                            $"[{toIndex}]={player.Inventory[toIndex]?.Name ?? "null"}");
         }
 
         public void Toggle()
         {
             Visible = !Visible;
-            
-            // Cancel any ongoing drag when window is hidden
-            if (!Visible && isDragging)
-            {
-                CleanupDrag();
-            }
             
             // Force update when window becomes visible
             if (Visible)
@@ -284,14 +59,19 @@ namespace Moonlight_Vale.UI
                 UpdateInventorySlots();
             }
         }
+        
         public List<Panel> GetInventorySlots()
         {
             return inventorySlots;
         }
 
+        /// <summary>
+        /// Check if HudManager is currently dragging (BackpackWindow no longer handles its own drag & drop)
+        /// </summary>
         public bool IsDragging()
         {
-            return isDragging;
+            // Since HudManager now handles all drag & drop, we delegate to it
+            return overworldScreen.HudManager.IsDragging();
         }
 
         private void CreateInventoryGrid()
@@ -368,13 +148,14 @@ namespace Moonlight_Vale.UI
                 var slot = inventorySlots[i];
                 slot.Widgets.Clear();
 
-                // Show different background for dragged item slot
-                if (isDragging && i == draggedItemIndex)
+                // Show different background for dragged item slot if HudManager is dragging from inventory
+                // Since we don't have direct access to HudManager's drag state, we'll use a simpler approach
+                if (IsDragging())
                 {
-                    slot.Background = new SolidBrush(new Color(80, 60, 40, 150)); // Semi-transparent
-                    slot.Border = new SolidBrush(Color.Yellow); // Highlight source slot
-                    slot.BorderThickness = new Thickness(3);
-                    continue; // Don't show item in source slot while dragging
+                    // For now, just use normal styling - HudManager will handle visual feedback
+                    slot.Background = new SolidBrush(new Color(60, 45, 30));
+                    slot.Border = new SolidBrush(Color.Gray);
+                    slot.BorderThickness = new Thickness(2);
                 }
                 else
                 {
@@ -438,6 +219,49 @@ namespace Moonlight_Vale.UI
             if (goldLabel != null)
             {
                 goldLabel.Text = $"Gold: {goldAmount}";
+            }
+        }
+
+        /// <summary>
+        /// Helper method for external drag & drop systems to highlight slots
+        /// </summary>
+        public void HighlightSlot(int slotIndex, bool highlight)
+        {
+            if (slotIndex >= 0 && slotIndex < inventorySlots.Count)
+            {
+                var slot = inventorySlots[slotIndex];
+                if (highlight)
+                {
+                    slot.Background = new SolidBrush(new Color(80, 60, 40, 150)); // Semi-transparent
+                    slot.Border = new SolidBrush(Color.Yellow); // Highlight border
+                    slot.BorderThickness = new Thickness(3);
+                }
+                else
+                {
+                    slot.Background = new SolidBrush(new Color(60, 45, 30));
+                    slot.Border = new SolidBrush(Color.Gray);
+                    slot.BorderThickness = new Thickness(2);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to hide item in slot during drag (called by HudManager)
+        /// </summary>
+        public void HideSlotItem(int slotIndex, bool hide)
+        {
+            if (slotIndex >= 0 && slotIndex < inventorySlots.Count)
+            {
+                var slot = inventorySlots[slotIndex];
+                if (hide)
+                {
+                    slot.Widgets.Clear(); // Hide item during drag
+                    HighlightSlot(slotIndex, true); // Highlight source slot
+                }
+                else
+                {
+                    UpdateInventorySlots(); // Restore normal display
+                }
             }
         }
     }

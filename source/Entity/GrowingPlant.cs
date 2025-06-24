@@ -34,7 +34,7 @@ public class GrowingPlant
     // Calculate days remaining to grow based on current game day
     public int GetDaysRemainingToGrow()
     {
-        int currentDay = Moonlight_Vale.Systems.TimeSystem.Instance.CurrentDay;
+        int currentDay = Systems.TimeSystem.Instance.CurrentDay;
         int daysGrown = currentDay - PlantingDay;
         return Math.Max(0, DaysToGrow - daysGrown);
     }

@@ -12,6 +12,7 @@ using Moonlight_Vale.Systems;
 using Moonlight_Vale.UI;
 using Squared.Tiled;
 using System.Linq;
+using System.Threading;
 using Moonlight_Vale.Entity.Items;
 
 namespace Moonlight_Vale.Screens
@@ -71,7 +72,7 @@ namespace Moonlight_Vale.Screens
         {
             Console.WriteLine("Player collapsed from exhaustion! Moving to PlayerHouse...");
             
-            SwitchToPlayerHouse();
+            SwitchToHouse();
             
             // Set player position to the exact spawn coordinates from TimeSystem (142, 120)
             Player.Position = spawnPosition;
@@ -82,13 +83,7 @@ namespace Moonlight_Vale.Screens
             
             Console.WriteLine($"Player spawned at home: {spawnPosition}");
         }
-
-        private void SwitchToPlayerHouse()
-        {
-            CurrentMap = new PlayerHouse(this);
-            Player.Map = CurrentMap;
-            CurrentMap.LoadContent(game.Content);
-        }
+        
 
         public override void LoadContent(ContentManager content)
         {
@@ -183,7 +178,7 @@ namespace Moonlight_Vale.Screens
 
             if (mouse.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released && !isMouseOverlayingHUD)
             {
-                if (CurrentMap is PlayerFarm && tileId == 83)
+                if (CurrentMap is PlayerFarm && tileId is 83 or 82 && Player.Position.X is > 520 and < 560)
                 {
                     SwitchToHouse();
                 }
@@ -201,6 +196,14 @@ namespace Moonlight_Vale.Screens
                     }
                 }
             }
+            if (CurrentMap is PlayerFarm && Player.Position.X > 1360 && (Player.Position.Y > 680 && Player.Position.Y < 688))
+            {
+                SwitchToTown();
+            }
+            else if (CurrentMap is Town &&  Player.Position.X is < 8  && Player.Position.Y is > 680 and < 718) // SWITCH LATER
+            {
+                SwitchToFarm();
+            }
         }
 
         public void SwitchToHouse()
@@ -214,10 +217,47 @@ namespace Moonlight_Vale.Screens
 
         public void SwitchToFarm()
         {
+            if (CurrentMap is PlayerHouse)
+            {
+                Player.Position = new Vector2(550, 520);
+            }
+            else
+            {
+                Player.Position = new Vector2(1347, 687);
+            }
             CurrentMap = new PlayerFarm(this);
             Player.Map = CurrentMap;
             CurrentMap.LoadContent(game.Content);
-            Player.Position = new Vector2(550, 520);
+            
+        }
+
+        public void SwitchToTown()
+        {
+            // 1. Clear previous map reference immediately
+            
+            CurrentMap = null; // Prevent rendering old map
+    
+            // 2. Create and load new map
+            var newMap = new Town(this);
+            newMap.LoadContent(game.Content);
+    
+            // 3. Set player position BEFORE assigning map
+            Player.Position = new Vector2(20, 687);
+    
+            // 4. Update camera position immediately to prevent jump
+            Camera.Position = Player.Position - new Vector2(
+                1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
+                1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f
+            );
+    
+            // 5. Assign new map atomically
+            CurrentMap = newMap;
+            Player.Map = CurrentMap;
+    
+            // 6. Force immediate camera update
+            Camera.Zoom = Zoom;
+    
+            Console.WriteLine($"Switched to Town - Player: {Player.Position}, Camera: {Camera.Position}");
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -258,15 +298,18 @@ namespace Moonlight_Vale.Screens
 
             if (CurrentMap?.TileMap != null)
             {
-                Vector2 tileIndex = GetTileIndex(Player.Position);
-                font.DrawText(spriteBatch, $"Tile index: {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
+                // Calculate center position of player - bigger Y offset to show the tile player is standing on
+                Vector2 playerCenter = new Vector2(Player.Position.X + 16, Player.Position.Y + 24);
+                Vector2 tileIndex = GetTileIndex(playerCenter);
+
+                font.DrawText(spriteBatch, $"Tile index (center): {tileIndex.X}, {tileIndex.Y}", new Vector2(20, 100), Color.White);
 
                 var layer = CurrentMap.TileMap.Layers.Values.FirstOrDefault();
                 if (layer != null && tileIndex.X >= 0 && tileIndex.Y >= 0 &&
                     tileIndex.X < layer.Width && tileIndex.Y < layer.Height)
                 {
                     int? tileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
-                    font.DrawText(spriteBatch, $"Tile ID: {tileId}", new Vector2(20, 150), Color.White);
+                    font.DrawText(spriteBatch, $"Tile ID (center): {tileId}", new Vector2(20, 150), Color.White);
                 }
             }
 
@@ -414,14 +457,14 @@ namespace Moonlight_Vale.Screens
 
         public override void Unload()
         {
-            // Unsubscribe from collapse event to prevent memory leaks
-            TimeSystem.Instance.PlayerCollapsedFromExhaustion -= OnPlayerCollapsedFromExhaustion;
-            
             // Dispose LogWindow to restore console
             LogWindow?.Dispose();
             
             Desktop.Widgets.Clear();
             Desktop.Root = null;
+            // Unsubscribe from collapse event to prevent memory leaks
+            TimeSystem.Instance.PlayerCollapsedFromExhaustion -= OnPlayerCollapsedFromExhaustion;
+            TimeSystem.Instance.Dispose();
         }
 
         public Vector2 GetTileIndex(Vector2 position)

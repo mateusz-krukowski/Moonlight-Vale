@@ -34,7 +34,8 @@ namespace Moonlight_Vale.Screens.Maps
                 33, 34, 35, 36, 37, 38, 39, 40, //cliff shadows
                 13,111,112, 127,128, //sowing plants
                 80,79, //growing plants
-                95 //grown plants
+                95, //grown plants
+                11 //path to town
             ];
         }
 

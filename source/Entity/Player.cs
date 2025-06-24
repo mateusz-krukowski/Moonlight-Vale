@@ -21,14 +21,12 @@ namespace Moonlight_Vale.Entity
         private const float DEFAULT_SPEED = 190f;
         private const float SPRINT_MULTIPLIER = 1.4f;
         private const float ANIMATION_SPEED = 0.18f;
-        private const float TOOL_COOLDOWN = 0.1f; // Cooldown between tool uses in seconds
+        private const float TOOL_COOLDOWN = 0.1f;
 
         private float _energy = 100f;
         private float _toolCooldownTimer = 0f;
 
         private Texture2D spriteSheet;
-        
-        // ContentManager reference for loading item content
         private ContentManager _contentManager;
 
         public SpriteEffects SpriteEffect { get; private set; } = SpriteEffects.None;
@@ -83,7 +81,7 @@ namespace Moonlight_Vale.Entity
             else
             {
                 
-            } //handle continue game logic
+            }
             
             Map = map;
             this.overworldScreen = overworldScreen;
@@ -92,12 +90,9 @@ namespace Moonlight_Vale.Entity
 
         public void LoadContent(ContentManager content, string spriteSheetPath)
         {
-            // Store ContentManager reference for later use
             _contentManager = content;
-            
             spriteSheet = content.Load<Texture2D>(spriteSheetPath);
             
-
             foreach (var item in ActionBar)
             {
                 item?.LoadContent(content);
@@ -107,7 +102,6 @@ namespace Moonlight_Vale.Entity
             {
                 item?.LoadContent(content);
             }
-            
         }
 
         public void Update(GameTime gameTime, KeyboardState keyboard, MouseState mouse, MouseState previousMouseState)
@@ -115,7 +109,6 @@ namespace Moonlight_Vale.Entity
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             Velocity = Vector2.Zero;
 
-            // Update tool cooldown timer
             if (_toolCooldownTimer > 0)
                 _toolCooldownTimer -= deltaTime;
 
@@ -156,19 +149,17 @@ namespace Moonlight_Vale.Entity
                 case var k when k.IsKeyDown(Keys.D0): SelectedItem = 9; break;
             }
 
-            // Check if left mouse button was just pressed (not held down) and cooldown has expired
             if (mouse.LeftButton == ButtonState.Pressed && 
                 previousMouseState.LeftButton == ButtonState.Released && 
                 _toolCooldownTimer <= 0)
             {
                if(!overworldScreen.isMouseOverlayingHUD) 
                {
-                   UseToolOrSeed(); // Changed from UseTool() to UseToolOrSeed()
-                   _toolCooldownTimer = TOOL_COOLDOWN; // Start cooldown
+                   UseToolOrSeed();
+                   _toolCooldownTimer = TOOL_COOLDOWN;
                }
             }
 
-            // Check if right mouse button was just pressed (not held down) and cooldown has expired
             if (mouse.RightButton == ButtonState.Pressed && 
                 previousMouseState.RightButton == ButtonState.Released && 
                 _toolCooldownTimer <= 0)
@@ -176,11 +167,9 @@ namespace Moonlight_Vale.Entity
                if(!overworldScreen.isMouseOverlayingHUD && Map is PlayerFarm) 
                {
                    HarvestCrop();
-                   _toolCooldownTimer = TOOL_COOLDOWN; // Start cooldown
+                   _toolCooldownTimer = TOOL_COOLDOWN;
                }
             }
-            
-            
         }
 
         private void Move(Vector2 direction, float deltaTime, int row, SpriteEffects effect = SpriteEffects.None)
@@ -299,11 +288,9 @@ namespace Moonlight_Vale.Entity
 
         public void UseToolOrSeed()
         {
-            // Check if there's a selected item in the action bar
             if (SelectedItem < 0 || SelectedItem >= ActionBar.Count || ActionBar[SelectedItem] == null)
                 return;
 
-            // Check if we're on PlayerFarm
             if (!(Map is PlayerFarm playerFarm))
             {
                 Console.WriteLine("Tools and seeds can only be used on the farm!");
@@ -330,11 +317,9 @@ namespace Moonlight_Vale.Entity
                     HandleToolUsage(itemName, currentTileId, ref newTileId);
                     break;
                 default:
-                    // Handle other items if needed
                     break;
             }
 
-            // Apply tile change if necessary
             if (newTileId != currentTileId)
             {
                 playerFarm.ModifyTile((int)tileIndex.X, (int)tileIndex.Y, newTileId);
@@ -348,35 +333,26 @@ namespace Moonlight_Vale.Entity
             
             int targetTileId = layer.GetTile((int)tileIndex.X, (int)tileIndex.Y);
             
-            // Check if tile ID is 95 (mature plant)
             if (targetTileId == 95)
             {
-                // Get plant data from growth system
                 var plant = PlantGrowthSystem.Instance.GetPlantAt((int)tileIndex.X, (int)tileIndex.Y);
                 
                 if (plant != null)
                 {
-                    // Change tile to empty farmland (ID 12) using playerFarm.ModifyTile
                     ((PlayerFarm)Map).ModifyTile((int)tileIndex.X, (int)tileIndex.Y, 13);
                     
-                    // Generate random harvest amount (1-3)
                     Random random = new Random();
-                    int amountToHarvest = random.Next(1, 4); // 1-3 inclusive
+                    int amountToHarvest = random.Next(1, 4);
                     
-                    // Create crop with plant name
-                    var crop = Crop.CreateCrop(plant.Name); // Using Name instead of Type
+                    var crop = Crop.CreateCrop(plant.Name);
                     
-                    // Load content for the newly created crop item
                     if (_contentManager != null)
                     {
                         crop.LoadContent(_contentManager);
                     }
                     
-                    // Add to inventory
                     AddItemToInventory(crop, amountToHarvest);
                     
-                    
-                    // Remove plant from growth system
                     PlantGrowthSystem.Instance.RemovePlant((int)tileIndex.X, (int)tileIndex.Y);
                     
                     Console.WriteLine($"Harvested {amountToHarvest}x {plant.Name}!");
@@ -386,34 +362,29 @@ namespace Moonlight_Vale.Entity
 
         private void HandleSeedPlanting(Seed seed, int currentTileId, Vector2 tileIndex, dynamic layer, ref int newTileId)
         {
-            // Check if tile can be planted on
-            if (currentTileId == 127 || currentTileId == 128) // tilled soil or watered soil
+            if (currentTileId == 127 || currentTileId == 128)
             {
                 newTileId = currentTileId switch
                 {
-                    127 => 111, // tilled soil -> dry seeds
-                    128 => 112, // watered soil -> watered seeds
+                    127 => 111,
+                    128 => 112,
                     _ => currentTileId
                 };
 
-                // Extract seed name (remove " seed" suffix)
                 string seedName = seed.Name;
                 if (seedName.EndsWith(" seed"))
                 {
-                    seedName = seedName.Substring(0, seedName.Length - 5); // Remove " seed"
+                    seedName = seedName.Substring(0, seedName.Length - 5);
                 }
 
-                // Plant the seed in the growth system, passing the initial tile type
                 PlantGrowthSystem.Instance.PlantSeed(seedName, (int)tileIndex.X, (int)tileIndex.Y, newTileId);
                 
-                // Reduce seed count or remove from inventory if it's the last one
                 if (seed.Amount > 1)
                 {
-                    seed.DecreaseAmount(); // Assuming this method exists
+                    seed.DecreaseAmount();
                 }
                 else
                 {
-                    // Remove seed from action bar if it's the last one
                     ActionBar[SelectedItem] = null;
                 }
             }
@@ -425,8 +396,8 @@ namespace Moonlight_Vale.Entity
             {
                 newTileId = currentTileId switch
                 {
-                    1 => 13,    // grass -> tilled soil
-                    13 => 1,    // tilled soil -> grass
+                    1 => 13,
+                    13 => 1,
                     _ => currentTileId
                 };
             }
@@ -434,8 +405,8 @@ namespace Moonlight_Vale.Entity
             {
                 newTileId = currentTileId switch
                 {
-                    13 => 127,  // tilled soil -> prepared soil
-                    127 => 13,  // prepared soil -> tilled soil
+                    13 => 127,
+                    127 => 13,
                     _ => currentTileId
                 };
             }
@@ -443,14 +414,13 @@ namespace Moonlight_Vale.Entity
             {
                 newTileId = currentTileId switch
                 {
-                    127 => 128, // tilled soil -> watered soil
-                    111 => 112, // dry seeds -> watered seeds 
-                    79 => 80, // dry plant -> watered plant
+                    127 => 128,
+                    111 => 112,
+                    79 => 80,
                     _ => currentTileId
                 };
                 
-                // If watering planted seeds, update the plant's watered status
-                if (currentTileId == 111) // dry seeds -> watered seeds
+                if (currentTileId == 111)
                 {
                     Vector2 tileIndex = GetTargetTileIndex(Position, Direction);
                     var plant = PlantGrowthSystem.Instance.GetPlantAt((int)tileIndex.X, (int)tileIndex.Y);
@@ -464,13 +434,11 @@ namespace Moonlight_Vale.Entity
 
         private void InitializeBasicTools()
         {
-            // First, ensure ActionBar has 10 slots (fill with nulls)
             while (ActionBar.Count < 10)
             {
                 ActionBar.Add(null);
             }
     
-            // Then add basic tools to first slots
             var basicTools = Tool.CreateBasicToolset();
             for (int i = 0; i < basicTools.Count && i < ActionBar.Count; i++)
             {
@@ -489,49 +457,93 @@ namespace Moonlight_Vale.Entity
         
         public void AddItemToInventory(Item item, int amount)
         {
-            if (Inventory.Count < 30)
+            // First try to stack with existing items in ACTION BAR
+            for (int i = 0; i < ActionBar.Count; i++)
             {
-                var existingItem = Inventory.FirstOrDefault(i => i.Name == item.Name);
-                if (existingItem == null)
-                {   
-                    item.Amount = amount;
-                    Inventory.Add(item);
-                    
-                    // Load content for newly added item if ContentManager is available
-                    if (_contentManager != null)
-                    {
-                        item.LoadContent(_contentManager);
-                    }
-                }
-                else
+                var actionBarItem = ActionBar[i];
+                if (actionBarItem != null && actionBarItem.Name == item.Name && 
+                    actionBarItem.Amount < actionBarItem.StackSize)
                 {
-                    if (existingItem.Amount + amount <= existingItem.StackSize) //amount will not exceed stack size
-                    {
-                        existingItem.Amount += amount;
-                    }
-                    else
-                    {
-                        var amountToAdd = existingItem.StackSize - existingItem.Amount; //calculate how much can be added
-                        existingItem.Amount += amountToAdd;
-                        
-                        var remainingAmount = amount - amountToAdd;
-                        item.Amount = remainingAmount;
-                        Inventory.Add(item);
-                        
-                        // Load content for newly added item if ContentManager is available
-                        if (_contentManager != null)
-                        {
-                            item.LoadContent(_contentManager);
-                        }
-                    }
+                    int spaceAvailable = actionBarItem.StackSize - actionBarItem.Amount;
+                    int amountToAdd = Math.Min(amount, spaceAvailable);
+                    
+                    actionBarItem.Amount += amountToAdd;
+                    amount -= amountToAdd;
+                    
+                    Console.WriteLine($"Stacked {amountToAdd}x {item.Name} with action bar slot {i}.");
+                    
+                    if (amount <= 0) return; // All items stacked successfully
+                }
+            }
+            
+            // Then try to stack with existing items in INVENTORY
+            for (int i = 0; i < Inventory.Count; i++)
+            {
+                var inventoryItem = Inventory[i];
+                if (inventoryItem != null && inventoryItem.Name == item.Name && 
+                    inventoryItem.Amount < inventoryItem.StackSize)
+                {
+                    int spaceAvailable = inventoryItem.StackSize - inventoryItem.Amount;
+                    int amountToAdd = Math.Min(amount, spaceAvailable);
+                    
+                    inventoryItem.Amount += amountToAdd;
+                    amount -= amountToAdd;
+                    
+                    Console.WriteLine($"Stacked {amountToAdd}x {item.Name} with inventory slot {i}.");
+                    
+                    if (amount <= 0) return; // All items stacked successfully
+                }
+            }
+
+            // Find first empty slot for remaining items
+            while (amount > 0)
+            {
+                int emptySlot = FindFirstEmptyInventorySlot();
+                if (emptySlot == -1)
+                {
+                    Console.WriteLine("Inventory is full! Cannot add more items.");
+                    return;
                 }
 
-                Console.WriteLine($"Added new item:{item.Name} x {amount} to inventory.");
+                // Ensure inventory list is large enough
+                while (Inventory.Count <= emptySlot)
+                {
+                    Inventory.Add(null);
+                }
+
+                // Create new item for this slot
+                var newItem = CreateNewItemCopy(item);
+                newItem.Amount = Math.Min(amount, item.StackSize);
+                
+                if (_contentManager != null)
+                {
+                    newItem.LoadContent(_contentManager);
+                }
+
+                Inventory[emptySlot] = newItem;
+                amount -= newItem.Amount;
+                
+                Console.WriteLine($"Added {newItem.Amount}x {newItem.Name} to inventory slot {emptySlot}.");
             }
-            else
+        }
+
+        private Item CreateNewItemCopy(Item original)
+        {
+            if (original is Seed seed)
             {
-                Debug.WriteLine("Inventory is full!");
+                string plantName = original.Name.Replace(" seed", "");
+                return Seed.CreateSeed(plantName);
             }
+            else if (original is Crop crop)
+            {
+                return Crop.CreateCrop(original.Name);
+            }
+            else if (original is Tool tool)
+            {
+                return new Tool(tool.Name, tool.Description, tool.IconPath, tool.StackSize, tool.Price, tool.Durability, tool.TypeOfTool);
+            }
+            
+            throw new NotImplementedException($"Cannot create copy of item type: {original.GetType()}");
         }
         
         public void AddItemToActionBar(Item item, int index)
@@ -565,7 +577,7 @@ namespace Moonlight_Vale.Entity
                 var item = Inventory[i];
                 if (item != null)
                 {
-                    Console.WriteLine($"[{i:D2}] {item.Name} x {item.Amount})");
+                    Console.WriteLine($"[{i:D2}] {item.Name} x {item.Amount}");
                 }
                 else
                 {
@@ -573,6 +585,124 @@ namespace Moonlight_Vale.Entity
                 }
             }
             Console.WriteLine("========================");
+        }
+
+        public void SwapActionBarItems(int index1, int index2)
+        {
+            if (index1 < 0 || index1 >= ActionBar.Count || index2 < 0 || index2 >= ActionBar.Count)
+            {
+                Console.WriteLine($"Invalid action bar indices: {index1}, {index2}");
+                return;
+            }
+
+            var temp = ActionBar[index1];
+            ActionBar[index1] = ActionBar[index2];
+            ActionBar[index2] = temp;
+
+            Console.WriteLine($"Swapped action bar items: [{index1}] <-> [{index2}]");
+        }
+
+        public void SwapInventoryItems(int index1, int index2)
+        {
+            while (Inventory.Count <= Math.Max(index1, index2))
+            {
+                Inventory.Add(null);
+            }
+
+            var temp = Inventory[index1];
+            Inventory[index1] = Inventory[index2];
+            Inventory[index2] = temp;
+
+            Console.WriteLine($"Swapped inventory items: [{index1}] <-> [{index2}]");
+        }
+
+        public void MoveInventoryToActionBar(int inventoryIndex, int actionBarIndex)
+        {
+            if (actionBarIndex < 0 || actionBarIndex >= ActionBar.Count)
+            {
+                Console.WriteLine($"Invalid action bar index: {actionBarIndex}");
+                return;
+            }
+
+            while (Inventory.Count <= inventoryIndex)
+            {
+                Inventory.Add(null);
+            }
+
+            var inventoryItem = Inventory[inventoryIndex];
+            var actionBarItem = ActionBar[actionBarIndex];
+
+            ActionBar[actionBarIndex] = inventoryItem;
+            Inventory[inventoryIndex] = actionBarItem;
+
+            Console.WriteLine($"Moved from inventory[{inventoryIndex}] to action bar[{actionBarIndex}]");
+        }
+
+        public void MoveActionBarToInventory(int actionBarIndex, int inventoryIndex)
+        {
+            if (actionBarIndex < 0 || actionBarIndex >= ActionBar.Count)
+            {
+                Console.WriteLine($"Invalid action bar index: {actionBarIndex}");
+                return;
+            }
+
+            while (Inventory.Count <= inventoryIndex)
+            {
+                Inventory.Add(null);
+            }
+
+            var actionBarItem = ActionBar[actionBarIndex];
+            var inventoryItem = Inventory[inventoryIndex];
+
+            Inventory[inventoryIndex] = actionBarItem;
+            ActionBar[actionBarIndex] = inventoryItem;
+
+            Console.WriteLine($"Moved from action bar[{actionBarIndex}] to inventory[{inventoryIndex}]");
+        }
+
+        public int FindFirstEmptyInventorySlot()
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                if (i >= Inventory.Count || Inventory[i] == null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public int FindFirstEmptyActionBarSlot()
+        {
+            for (int i = 0; i < ActionBar.Count; i++)
+            {
+                if (ActionBar[i] == null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public bool TryStackItems(Item sourceItem, Item targetItem)
+        {
+            if (sourceItem == null || targetItem == null)
+                return false;
+
+            if (sourceItem.GetType() == targetItem.GetType() && 
+                sourceItem.Name == targetItem.Name && 
+                targetItem.Amount < targetItem.StackSize)
+            {
+                int spaceAvailable = targetItem.StackSize - targetItem.Amount;
+                int amountToTransfer = Math.Min(sourceItem.Amount, spaceAvailable);
+
+                targetItem.Amount += amountToTransfer;
+                sourceItem.Amount -= amountToTransfer;
+
+                return sourceItem.Amount == 0;
+            }
+
+            return false;
         }
     }
 }

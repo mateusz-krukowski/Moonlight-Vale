@@ -14,6 +14,12 @@ using Myra.Graphics2D.TextureAtlases;
 
 namespace Moonlight_Vale.UI
 {
+    public enum DragSource
+    {
+        ActionBar,
+        Inventory
+    }
+
     public class HudManager
     {
         private OverworldScreen overworldScreen;
@@ -24,8 +30,17 @@ namespace Moonlight_Vale.UI
         private HorizontalStackPanel utilitiesBar;
         private VerticalStackPanel inGameMenu;
         private Window settingsWindow;
-        private BackpackWindow backpackWindow; // Using new BackpackWindow class
+        private BackpackWindow backpackWindow;
         private Label tooltipLabel;
+
+        // Unified Drag & Drop System
+        private bool isDragging = false;
+        private DragSource dragSource;
+        private int draggedItemIndex = -1;
+        private Item draggedItem = null;
+        private Panel draggedIcon = null;
+        private MouseState previousMouseState;
+        private Point dragStartPosition;
 
         public KeyboardState Keyboard => overworldScreen.previousKeyboardState;
         public MouseState Mouse => overworldScreen.previousMouseState;
@@ -55,30 +70,294 @@ namespace Moonlight_Vale.UI
             itemBar = CreateItemBar();
             utilitiesBar = CreateUtilitiesBar();
             inGameMenu = CreateInGameMenu();
-            backpackWindow = new BackpackWindow(overworldScreen); // Create BackpackWindow
+            backpackWindow = new BackpackWindow(overworldScreen);
             CreateTooltip();
 
             // Add widgets in proper Z-order (last added renders on top)
             hud.Widgets.Add(timeLabel);
             hud.Widgets.Add(itemBar);
             hud.Widgets.Add(utilitiesBar);
-            hud.Widgets.Add(backpackWindow); // Add BackpackWindow
-            hud.Widgets.Add(inGameMenu); // Add inGameMenu AFTER backpack so it renders on top
-            hud.Widgets.Add(tooltipLabel); // Add tooltip LAST so it renders on top of everything
+            hud.Widgets.Add(backpackWindow);
+            hud.Widgets.Add(inGameMenu);
+            hud.Widgets.Add(tooltipLabel);
 
             Desktop.Root = hud;
+            previousMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
         }
 
         public void Update()
         {
+            var currentMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
+            
+            // Handle unified drag & drop system
+            HandleUnifiedDragAndDrop(currentMouseState);
+            
             UpdateTooltip();
-            backpackWindow.Update(); // This now handles drag and drop internally
-            EnsureTooltipOnTop(); // Ensure tooltip stays on top
+            backpackWindow.Update();
+            EnsureTooltipOnTop();
+            
+            previousMouseState = currentMouseState;
+        }
+
+        private void HandleUnifiedDragAndDrop(MouseState currentMouseState)
+        {
+            var mousePosition = currentMouseState.Position;
+            
+            // Start drag detection
+            if (!isDragging && 
+                currentMouseState.LeftButton == ButtonState.Pressed && 
+                previousMouseState.LeftButton == ButtonState.Released)
+            {
+                // Check if drag started from action bar
+                int actionBarIndex = GetActionBarSlotAtMouse(mousePosition);
+                if (actionBarIndex != -1)
+                {
+                    var player = overworldScreen.Player;
+                    if (player.ActionBar[actionBarIndex] != null)
+                    {
+                        StartDrag(DragSource.ActionBar, actionBarIndex, player.ActionBar[actionBarIndex], mousePosition);
+                        return;
+                    }
+                }
+                
+                // Check if drag started from inventory (if backpack is visible)
+                if (backpackWindow.Visible)
+                {
+                    int inventoryIndex = GetInventorySlotAtMouse(mousePosition);
+                    if (inventoryIndex != -1)
+                    {
+                        var player = overworldScreen.Player;
+                        if (inventoryIndex < player.Inventory.Count && player.Inventory[inventoryIndex] != null)
+                        {
+                            StartDrag(DragSource.Inventory, inventoryIndex, player.Inventory[inventoryIndex], mousePosition);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Update drag position
+            if (isDragging && draggedIcon != null)
+            {
+                draggedIcon.Left = mousePosition.X - 32;
+                draggedIcon.Top = mousePosition.Y - 32;
+            }
+            
+            // End drag detection
+            if (isDragging && 
+                currentMouseState.LeftButton == ButtonState.Released && 
+                previousMouseState.LeftButton == ButtonState.Pressed)
+            {
+                EndDrag(mousePosition);
+            }
+        }
+
+        private int GetActionBarSlotAtMouse(Point mousePosition)
+        {
+            for (int i = 0; i < itemSlots.Count; i++)
+            {
+                if (itemSlots[i].HitTest(mousePosition) != null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private int GetInventorySlotAtMouse(Point mousePosition)
+        {
+            if (!backpackWindow.Visible) return -1;
+            
+            var inventorySlots = backpackWindow.GetInventorySlots();
+            for (int i = 0; i < inventorySlots.Count && i < 30; i++)
+            {
+                if (inventorySlots[i].HitTest(mousePosition) != null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private void StartDrag(DragSource source, int index, Item item, Point mousePosition)
+        {
+            if (item == null) return;
+            
+            isDragging = true;
+            dragSource = source;
+            draggedItemIndex = index;
+            draggedItem = item;
+            dragStartPosition = mousePosition;
+            
+            CreateDragIcon(item, mousePosition);
+            
+            // Visual feedback on source slot
+            UpdateSlotHighlight(source, index, true);
+            
+            Console.WriteLine($"Started dragging: {item.Name} from {source} slot {index}");
+        }
+
+        private void CreateDragIcon(Item item, Point mousePosition)
+        {
+            if (item?.Icon == null) return;
+            
+            draggedIcon = new Panel
+            {
+                Width = 64,
+                Height = 64,
+                Left = mousePosition.X - 32,
+                Top = mousePosition.Y - 32,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Background = new SolidBrush(Color.Transparent),
+                BorderThickness = new Thickness(2),
+                Border = new SolidBrush(Color.Yellow)
+            };
+            
+            var itemImage = new Image
+            {
+                Renderable = new TextureRegion(item.Icon),
+                Width = 60,
+                Height = 60,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            
+            draggedIcon.Widgets.Add(itemImage);
+            
+            if (item.Amount > 1)
+            {
+                var amountLabel = new Label
+                {
+                    Text = item.Amount.ToString(),
+                    Font = FontSystem.GetFont(1.5f),
+                    TextColor = Color.White,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Margin = new Thickness(0, 0, 2, 2)
+                };
+                draggedIcon.Widgets.Add(amountLabel);
+            }
+            
+            Desktop.Widgets.Add(draggedIcon);
+        }
+
+        private void EndDrag(Point mousePosition)
+        {
+            if (!isDragging) return;
+            
+            // Determine drop target
+            int targetActionBarIndex = GetActionBarSlotAtMouse(mousePosition);
+            int targetInventoryIndex = GetInventorySlotAtMouse(mousePosition);
+            
+            bool dropSuccessful = false;
+            
+            if (targetActionBarIndex != -1)
+            {
+                // Drop on action bar
+                if (dragSource == DragSource.ActionBar && targetActionBarIndex != draggedItemIndex)
+                {
+                    // Action bar to action bar swap
+                    overworldScreen.Player.SwapActionBarItems(draggedItemIndex, targetActionBarIndex);
+                    dropSuccessful = true;
+                    Console.WriteLine($"Swapped action bar items: {draggedItemIndex} <-> {targetActionBarIndex}");
+                }
+                else if (dragSource == DragSource.Inventory)
+                {
+                    // Inventory to action bar
+                    overworldScreen.Player.MoveInventoryToActionBar(draggedItemIndex, targetActionBarIndex);
+                    dropSuccessful = true;
+                    Console.WriteLine($"Moved from inventory[{draggedItemIndex}] to action bar[{targetActionBarIndex}]");
+                }
+            }
+            else if (targetInventoryIndex != -1 && backpackWindow.Visible)
+            {
+                // Drop on inventory
+                if (dragSource == DragSource.Inventory && targetInventoryIndex != draggedItemIndex)
+                {
+                    // Inventory to inventory swap
+                    overworldScreen.Player.SwapInventoryItems(draggedItemIndex, targetInventoryIndex);
+                    dropSuccessful = true;
+                    Console.WriteLine($"Swapped inventory items: {draggedItemIndex} <-> {targetInventoryIndex}");
+                }
+                else if (dragSource == DragSource.ActionBar)
+                {
+                    // Action bar to inventory
+                    overworldScreen.Player.MoveActionBarToInventory(draggedItemIndex, targetInventoryIndex);
+                    dropSuccessful = true;
+                    Console.WriteLine($"Moved from action bar[{draggedItemIndex}] to inventory[{targetInventoryIndex}]");
+                }
+            }
+            
+            if (!dropSuccessful)
+            {
+                Console.WriteLine("Drag cancelled - no valid drop target");
+            }
+            
+            CleanupDrag();
+        }
+
+        private void UpdateSlotHighlight(DragSource source, int index, bool highlight)
+        {
+            if (source == DragSource.ActionBar && index < itemSlots.Count)
+            {
+                var slot = itemSlots[index];
+                if (highlight)
+                {
+                    slot.Background = new SolidBrush(new Color(142, 105, 67, 150));
+                    slot.Border = new SolidBrush(Color.Yellow);
+                    slot.BorderThickness = new Thickness(3);
+                }
+                else
+                {
+                    slot.Background = new SolidBrush(new Color(142, 105, 67));
+                    slot.Border = new SolidBrush(Color.White);
+                    slot.BorderThickness = new Thickness(2);
+                }
+            }
+            else if (source == DragSource.Inventory)
+            {
+                // Use BackpackWindow's highlight method for inventory slots
+                backpackWindow.HighlightSlot(index, highlight);
+                if (highlight)
+                {
+                    // Also hide the item in the source slot during drag
+                    backpackWindow.HideSlotItem(index, true);
+                }
+                else
+                {
+                    // Restore normal display
+                    backpackWindow.HideSlotItem(index, false);
+                }
+            }
+        }
+
+        private void CleanupDrag()
+        {
+            if (draggedIcon != null)
+            {
+                Desktop.Widgets.Remove(draggedIcon);
+                draggedIcon = null;
+            }
+            
+            // Restore source slot appearance
+            if (isDragging)
+            {
+                UpdateSlotHighlight(dragSource, draggedItemIndex, false);
+            }
+            
+            isDragging = false;
+            draggedItemIndex = -1;
+            draggedItem = null;
+        }
+
+        public bool IsDragging()
+        {
+            return isDragging;
         }
 
         private void EnsureTooltipOnTop()
         {
-            // If tooltip is visible but not the last widget, move it to the end
             if (tooltipLabel.Visible && hud.Widgets.IndexOf(tooltipLabel) != hud.Widgets.Count - 1)
             {
                 hud.Widgets.Remove(tooltipLabel);
@@ -123,6 +402,12 @@ namespace Moonlight_Vale.UI
                 var slot = itemSlots[i];
                 slot.Widgets.Clear();
 
+                // Don't show item in source slot while dragging
+                if (isDragging && dragSource == DragSource.ActionBar && i == draggedItemIndex)
+                {
+                    continue;
+                }
+
                 var item = player.ActionBar[i];
                 if (item?.Icon != null)
                 {
@@ -135,6 +420,21 @@ namespace Moonlight_Vale.UI
                         VerticalAlignment = VerticalAlignment.Center
                     };
                     slot.Widgets.Add(itemImage);
+
+                    // Add amount label for stackable items
+                    if (item.Amount > 1)
+                    {
+                        var amountLabel = new Label
+                        {
+                            Text = item.Amount.ToString(),
+                            Font = FontSystem.GetFont(1.5f),
+                            TextColor = Color.White,
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            VerticalAlignment = VerticalAlignment.Bottom,
+                            Margin = new Thickness(0, 0, 2, 2)
+                        };
+                        slot.Widgets.Add(amountLabel);
+                    }
                 }
             }
         }
@@ -145,7 +445,7 @@ namespace Moonlight_Vale.UI
             var player = overworldScreen.Player;
             
             // Don't show tooltips while dragging
-            if (backpackWindow.IsDragging())
+            if (isDragging)
             {
                 if (tooltipLabel.Visible)
                 {
@@ -160,19 +460,18 @@ namespace Moonlight_Vale.UI
                 var slot = itemSlots[i];
                 var item = player.ActionBar[i];
                 
-                // Simple bounds check for action bar slots
-                var slotBounds = slot.Bounds;
-                if (item != null && !string.IsNullOrEmpty(item.Name) && 
-                    slotBounds.Contains(mousePosition.X - slot.Left, mousePosition.Y - slot.Top))
+                if (item != null && !string.IsNullOrEmpty(item.Name))
                 {
-                    // Show tooltip at cursor position
-                    tooltipLabel.Text = (item is Plant)? item.Name + $" ({item.Amount})":item.Name;
-                    tooltipLabel.Width = tooltipLabel.Text.Length * 12;
-                    tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
-                    tooltipLabel.Top = mousePosition.Y - 35;
-                    tooltipLabel.Visible = true;
-                    
-                    return;
+                    if (slot.HitTest(mousePosition) != null)
+                    {
+                        tooltipLabel.Text = (item is Plant) ? $"{item.Name} ({item.Amount})" : item.Name;
+                        tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                        tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                        tooltipLabel.Top = mousePosition.Y - 35;
+                        tooltipLabel.Visible = true;
+                        
+                        return;
+                    }
                 }
             }
 
@@ -180,25 +479,17 @@ namespace Moonlight_Vale.UI
             if (backpackWindow.Visible)
             {
                 var inventorySlots = backpackWindow.GetInventorySlots();
-                for (int i = 0; i < inventorySlots.Count; i++)
+                
+                for (int i = 0; i < inventorySlots.Count && i < 30; i++)
                 {
                     var slot = inventorySlots[i];
-                    
-                    // Check if there's an item at this index
                     if (i < player.Inventory.Count && player.Inventory[i] != null)
                     {
                         var item = player.Inventory[i];
-                        var slotBounds = slot.Bounds;
                         
-                        // Simple bounds check adjusted for window position
-                        var adjustedX = mousePosition.X - backpackWindow.Left - backpackWindow.Padding.Left;
-                        var adjustedY = mousePosition.Y - backpackWindow.Top - backpackWindow.Padding.Top - 30; // title bar
-                        
-                        if (!string.IsNullOrEmpty(item.Name) && 
-                            slotBounds.Contains(adjustedX, adjustedY))
+                        if (slot.HitTest(mousePosition) != null)
                         {
-                            // Show tooltip at cursor position
-                            tooltipLabel.Text = (item is Plant) ? item.Name + $" ({item.Amount})" : $"{item.Name} ({item.Amount})";
+                            tooltipLabel.Text = (item is Plant) ? $"{item.Name} ({item.Amount})" : $"{item.Name} ({item.Amount})";
                             tooltipLabel.Width = tooltipLabel.Text.Length * 12;
                             tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
                             tooltipLabel.Top = mousePosition.Y - 35;
@@ -233,13 +524,13 @@ namespace Moonlight_Vale.UI
                 {
                     foreach (var child in inGameMenu.Widgets)
                     {
-                        if (child.Visible && child.Bounds.Contains(mousePosition))
+                        if (child.Visible && child.HitTest(mousePosition) != null)
                             return true;
                     }
                 }
                 else
                 {
-                    if (widget.Bounds.Contains(mousePosition))
+                    if (widget.HitTest(mousePosition) != null)
                         return true;
                 }
             }
@@ -249,15 +540,14 @@ namespace Moonlight_Vale.UI
 
         private void CreateTooltip()
         {
-            // Create simple tooltip label
             tooltipLabel = new Label
             {
                 Font = FontSystem.GetFont(2),
                 TextColor = Color.White,
-                Background = new SolidBrush(new Color(60, 60, 60, 200)), // Dark gray semi-transparent background
+                Background = new SolidBrush(new Color(60, 60, 60, 200)),
                 Padding = new Thickness(6, 18, 6, 0),
                 Visible = false,
-                Height = 30  // Set fixed height
+                Height = 30
             };
         }
 
@@ -418,11 +708,8 @@ namespace Moonlight_Vale.UI
 
         public void ToggleBackpackWindow()
         {
-            // Check if window was removed from UI tree (e.g., by clicking X)
             if (backpackWindow.Parent == null)
             {
-                // Window was removed, re-add it to HUD in correct Z-order
-                // Find inGameMenu index and insert backpack before it
                 int inGameMenuIndex = hud.Widgets.IndexOf(inGameMenu);
                 if (inGameMenuIndex >= 0)
                 {
@@ -430,7 +717,6 @@ namespace Moonlight_Vale.UI
                 }
                 else
                 {
-                    // Fallback: add at end minus 1 (before tooltip)
                     int insertIndex = Math.Max(0, hud.Widgets.Count - 1);
                     hud.Widgets.Insert(insertIndex, backpackWindow);
                 }
@@ -438,26 +724,7 @@ namespace Moonlight_Vale.UI
             }
             else
             {
-                // Window is still in UI tree, just toggle visibility
                 backpackWindow.Toggle();
-            }
-        }
-
-        // Methods for drag and drop icon management
-        public void AddDragIcon(Panel dragIcon)
-        {
-            if (dragIcon != null)
-            {
-                // Add drag icon as the topmost widget (after tooltip)
-                hud.Widgets.Add(dragIcon);
-            }
-        }
-
-        public void RemoveDragIcon(Panel dragIcon)
-        {
-            if (dragIcon != null && hud.Widgets.Contains(dragIcon))
-            {
-                hud.Widgets.Remove(dragIcon);
             }
         }
     }
