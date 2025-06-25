@@ -39,7 +39,8 @@ namespace Moonlight_Vale.Entity
         public List<Item> ActionBar { get; } = new List<Item>(10);
 
         public OverworldScreen overworldScreen { get; set; }
-
+        
+        public string Name { get; private set; } = "Player";
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public Vector2 Direction { get; set; }

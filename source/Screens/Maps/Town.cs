@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Moonlight_Vale.Entity;
 using Squared.Tiled;
 
 namespace Moonlight_Vale.Screens.Maps
@@ -16,6 +17,7 @@ namespace Moonlight_Vale.Screens.Maps
         public List<(int, int)> Portals { get; set; }
         public Texture2D TileSet => TileMap?.Tilesets?.Values?.FirstOrDefault()?.Texture;
         public OverworldScreen OverworldScreen { get; }
+        public Npc CropVendor { get; set; } //change into list later if needed
 
         public Town(OverworldScreen overworldScreen)
         {
@@ -52,8 +54,35 @@ namespace Moonlight_Vale.Screens.Maps
                 488,489,490,491,492 ,440,441,442,443, 444,
                 536,537,538,539, 580, 581,582,583,584,585,586,587, 632,633,634, 635 // city hall path
             ];
+
+            var name = overworldScreen.Player.Name;
+
+            CropVendor = new NpcBuilder<Vendor>()
+                .SetName("Wilhelm the Market Master")
+                .SetGreetings([
+                    "Welcome to my market stall! We have the finest crops in the land!",
+                    "Best prices for quality goods",
+                    "I always look forward to seeing you, " + name + "!"
+                ])
+                .SetBeforeTradeDialogues([
+                "My favorite supplier is back! What have you got today, " + name + "?",
+                "I hope you brought something good to trade, " + name + "!",
+              
+                ])
+                .SetAfterTradeDialogues([
+                "Doing business with you is a real pleasure," + name + "!", 
+                "It's always a pleasure doing business with you, "+ name +"!",
+                "Quality goods as always, " + name +" Thank you!" +
+                "My buyers will be thrilled with this quality, " + name + "!"
+                ])
+                .SetFarewells([
+                    "Come back soon, friend!",
+                    "Don't forget to tell your friends about us!"
+                ])
+                .SetPosition(new Vector2(735,745))
+                .Build();
+
         }
-        
         
         public void DrawMap(SpriteBatch spriteBatch)
         {
@@ -77,6 +106,8 @@ namespace Moonlight_Vale.Screens.Maps
                     }
                 }
             }
+            
+            CropVendor.Draw(spriteBatch); //change to list later
         }
 
         public void LoadContent(ContentManager content)
@@ -90,6 +121,8 @@ namespace Moonlight_Vale.Screens.Maps
                 System.Console.WriteLine($"Failed to load Town map: {ex.Message} although it is located in Content/Tilemaps xD");
                 TileMap = null;
             }
+            
+            CropVendor?.LoadContent(content, @"Spritesheets\\crop_vendor"); //change to traversing list later
         }
     }
 }

@@ -244,10 +244,7 @@ namespace Moonlight_Vale.UI
                 }
             }
         }
-
-        /// <summary>
-        /// Helper method to hide item in slot during drag (called by HudManager)
-        /// </summary>
+        
         public void HideSlotItem(int slotIndex, bool hide)
         {
             if (slotIndex >= 0 && slotIndex < inventorySlots.Count)

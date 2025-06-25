@@ -195,6 +195,10 @@ namespace Moonlight_Vale.Screens
                         SwitchToFarm();
                     }
                 }
+                else if (CurrentMap is Town && tileId is 79 or 80 && Player.Position.X is > 1360 and < 1400)
+                {
+                    SwitchToShop();
+                }
             }
             if (CurrentMap is PlayerFarm && Player.Position.X > 1360 && (Player.Position.Y > 680 && Player.Position.Y < 688))
             {
@@ -204,6 +208,11 @@ namespace Moonlight_Vale.Screens
             {
                 SwitchToFarm();
             }
+        }
+
+        private void SwitchToShop()
+        {
+            throw new NotImplementedException();
         }
 
         public void SwitchToHouse()

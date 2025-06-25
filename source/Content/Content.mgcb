@@ -34,18 +34,6 @@
 /processorParam:TextureFormat=Color
 /build:Icons/Crops/carrot_crop.png
 
-#begin Icons/Crops/carrot_crop.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Crops/carrot_crop.png
-
 #begin Icons/Crops/parsnip_crop.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -57,30 +45,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Icons/Crops/parsnip_crop.png
-
-#begin Icons/Crops/parsnip_crop.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Crops/parsnip_crop.png
-
-#begin Icons/Icon.bmp
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Icon.bmp
 
 #begin Icons/Icon.bmp
 /importer:TextureImporter
@@ -106,18 +70,6 @@
 /processorParam:TextureFormat=Color
 /build:Icons/Icon.ico
 
-#begin Icons/Icon.ico
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Icon.ico
-
 #begin Icons/placeholder64.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -129,30 +81,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Icons/placeholder64.png
-
-#begin Icons/placeholder64.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/placeholder64.png
-
-#begin Icons/Seeds/carrot_seed.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Seeds/carrot_seed.png
 
 #begin Icons/Seeds/carrot_seed.png
 /importer:TextureImporter
@@ -178,18 +106,6 @@
 /processorParam:TextureFormat=Color
 /build:Icons/Seeds/parsnip_seed.png
 
-#begin Icons/Seeds/parsnip_seed.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Seeds/parsnip_seed.png
-
 #begin Icons/Tools/hoe.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -201,42 +117,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Icons/Tools/hoe.png
-
-#begin Icons/Tools/hoe.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Tools/hoe.png
-
-#begin Icons/Tools/shovel.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Tools/shovel.png
-
-#begin Icons/Tools/shovel.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Icons/Tools/shovel.png
 
 #begin Icons/Tools/scythe.png
 /importer:TextureImporter
@@ -250,7 +130,7 @@
 /processorParam:TextureFormat=Color
 /build:Icons/Tools/scythe.png
 
-#begin Icons/Tools/watering_can.png
+#begin Icons/Tools/shovel.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -260,7 +140,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Icons/Tools/watering_can.png
+/build:Icons/Tools/shovel.png
 
 #begin Icons/Tools/watering_can.png
 /importer:TextureImporter
@@ -286,7 +166,13 @@
 /processorParam:TextureFormat=Color
 /build:Images/Main_Menu.png
 
-#begin Images/Main_Menu.png
+#begin Music/MainTheme.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Music/MainTheme.ogg
+
+#begin Spritesheets/crop_vendor.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -296,19 +182,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Images/Main_Menu.png
-
-#begin Music/MainTheme.ogg
-/importer:OggImporter
-/processor:SongProcessor
-/processorParam:Quality=Best
-/build:Music/MainTheme.ogg
-
-#begin Music/MainTheme.ogg
-/importer:OggImporter
-/processor:SongProcessor
-/processorParam:Quality=Best
-/build:Music/MainTheme.ogg
+/build:Spritesheets/crop_vendor.png
 
 #begin Spritesheets/hero_spritesheet.png
 /importer:TextureImporter
@@ -334,7 +208,7 @@
 /processorParam:TextureFormat=Color
 /build:Spritesheets/hero_spritesheet.png
 
-#begin Spritesheets/tile_cursor2.png
+#begin Spritesheets/seed_vendor.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -344,7 +218,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Spritesheets/tile_cursor2.png
+/build:Spritesheets/seed_vendor.png
 
 #begin Spritesheets/tile_cursor2.png
 /importer:TextureImporter
@@ -378,30 +252,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Tilesets/farm_reduced.png
-
-#begin Tilesets/farm_reduced.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Tilesets/farm_reduced.png
-
-#begin Tilesets/house_interior.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Tilesets/house_interior.png
 
 #begin Tilesets/house_interior.png
 /importer:TextureImporter
