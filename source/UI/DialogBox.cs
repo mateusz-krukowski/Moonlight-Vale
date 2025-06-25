@@ -209,10 +209,13 @@ namespace Moonlight_Vale.UI
             }
             else
             {
-                // End dialogue
-                if (DialogueSystem.Instance != null)
+                // End dialogue directly through HudManager
+                hudManager.HideDialogue();
+                
+                // Re-enable player movement
+                if (player != null)
                 {
-                    DialogueSystem.Instance.HandleInput();
+                    player.CanMove = true;
                 }
             }
         }
@@ -232,10 +235,13 @@ namespace Moonlight_Vale.UI
                     break;
             }
             
-            // End dialogue after option selection
-            if (DialogueSystem.Instance != null)
+            // End dialogue directly through HudManager
+            hudManager.HideDialogue();
+            
+            // Re-enable player movement
+            if (player != null)
             {
-                DialogueSystem.Instance.HandleInput();
+                player.CanMove = true;
             }
         }
 
@@ -261,6 +267,7 @@ namespace Moonlight_Vale.UI
             }
         }
 
+        // Handle keyboard input (E key) - same behavior as Continue button
         public void HandleKeyboardInput()
         {
             HandleContinueClick();

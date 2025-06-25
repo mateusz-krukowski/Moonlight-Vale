@@ -119,6 +119,7 @@ namespace Moonlight_Vale.UI
                 backpackWindow.Update();
             }
             
+            EnsureTooltipOnTop();
             
             previousMouseState = currentMouseState;
         }
@@ -155,6 +156,21 @@ namespace Moonlight_Vale.UI
             itemBar.Visible = true;
             
             isDialogueActive = false;
+            
+            // Destroy DialogueSystem singleton directly to prevent infinite loop
+            // We can't call DialogueSystem.EndDialogue() because it would call this method again
+            if (DialogueSystem.Instance != null)
+            {
+                // Re-enable player movement
+                if (DialogueSystem.Instance.Player != null)
+                {
+                    DialogueSystem.Instance.Player.CanMove = true;
+                }
+                
+                // Directly destroy the singleton by setting private field to null
+                // This is hacky but necessary to avoid circular calls
+                typeof(DialogueSystem).GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.SetValue(null, null);
+            }
             
             Console.WriteLine("Dialogue hidden by HudManager");
         }
