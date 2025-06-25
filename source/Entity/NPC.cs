@@ -300,6 +300,15 @@ namespace Moonlight_Vale.Entity
 
             throw new InvalidOperationException("SetAfterTradeDialogues can only be used with Vendor NPCs");
         }
+        
+        public NpcBuilder<T> SetInteractionBounds(Rectangle bounds)
+        {
+            return this;
+
+
+
+
+        }
 
         public T Build()
         {

@@ -80,6 +80,7 @@ namespace Moonlight_Vale.Screens.Maps
                     "Don't forget to tell your friends about us!"
                 ])
                 .SetPosition(new Vector2(735,745))
+                .SetZoom(2.0f)
                 .Build();
 
         }

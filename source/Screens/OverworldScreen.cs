@@ -195,9 +195,22 @@ namespace Moonlight_Vale.Screens
                         SwitchToFarm();
                     }
                 }
-                else if (CurrentMap is Town && tileId is 79 or 80 && Player.Position.X is > 1360 and < 1400)
+                else if (CurrentMap is Town)
                 {
-                    SwitchToShop();
+                    Vector2 index = GetTileIndex(Player.Position);
+                    Console.WriteLine($"Player tile in Town: ({index.X}, {index.Y})"); // Debug
+    
+                    if (index.X == 4 && index.Y == 29)
+                    {
+                        SwitchToShop();
+                    }
+                }
+                else if (CurrentMap is Shop)
+                {
+                    if (Player.Position.X is > 219 and < 265 && Player.Position.Y >= 364)
+                    {
+                        SwitchToTown();
+                    }
                 }
             }
             if (CurrentMap is PlayerFarm && Player.Position.X > 1360 && (Player.Position.Y > 680 && Player.Position.Y < 688))
@@ -212,7 +225,10 @@ namespace Moonlight_Vale.Screens
 
         private void SwitchToShop()
         {
-            throw new NotImplementedException();
+            CurrentMap = new Shop(this);
+            Player.Map = CurrentMap;
+            CurrentMap.LoadContent(game.Content);
+            Player.Position = CurrentMap.PlayerSpawnPoint;
         }
 
         public void SwitchToHouse()
@@ -243,29 +259,46 @@ namespace Moonlight_Vale.Screens
         public void SwitchToTown()
         {
             // 1. Clear previous map reference immediately
-            
+            var previousMap = CurrentMap; // Store reference to check where we came from
             CurrentMap = null; // Prevent rendering old map
-    
+
             // 2. Create and load new map
             var newMap = new Town(this);
             newMap.LoadContent(game.Content);
+
+            // 3. Set player position BEFORE assigning map - depends on where we came from
+            Vector2 spawnPosition;
+            if (previousMap is PlayerFarm)
+            {
+                spawnPosition = new Vector2(20, 687); // Coming from Farm
+                Console.WriteLine("Coming from Farm, spawning at town entrance");
+            }
+            else if (previousMap is Shop)
+            {
+                spawnPosition = new Vector2(130, 946); // Coming from Shop
+                Console.WriteLine("Coming from Shop, spawning near shop area");
+            }
+            else
+            {
+                spawnPosition = new Vector2(20, 687); // Default fallback
+                Console.WriteLine("Unknown previous map, using default spawn");
+            }
     
-            // 3. Set player position BEFORE assigning map
-            Player.Position = new Vector2(20, 687);
-    
+            Player.Position = spawnPosition;
+
             // 4. Update camera position immediately to prevent jump
             Camera.Position = Player.Position - new Vector2(
                 1920 / 2f / Zoom - Player.SpriteWidth * Zoom / 2f,
                 1080 / 2f / Zoom - Player.SpriteHeight * Zoom / 2f
             );
-    
+
             // 5. Assign new map atomically
             CurrentMap = newMap;
             Player.Map = CurrentMap;
-    
+
             // 6. Force immediate camera update
             Camera.Zoom = Zoom;
-    
+
             Console.WriteLine($"Switched to Town - Player: {Player.Position}, Camera: {Camera.Position}");
         }
 
@@ -276,10 +309,7 @@ namespace Moonlight_Vale.Screens
 
             spriteBatch.Begin(transformMatrix: Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
 
-            foreach (var layer in CurrentMap.TileMap.Layers.Values)
-            {
-                DrawLayer(spriteBatch, layer);
-            }
+            CurrentMap.DrawMap(spriteBatch);
 
             DrawTargetTile(spriteBatch);
             Player.Draw(spriteBatch);

@@ -241,6 +241,9 @@
 #begin Tilemaps/village.tmx
 /copy:Tilemaps/village.tmx
 
+#begin Tilemaps/shop.tmx
+/copy:Tilemaps/shop.tmx
+
 #begin Tilesets/farm_reduced.png
 /importer:TextureImporter
 /processor:TextureProcessor

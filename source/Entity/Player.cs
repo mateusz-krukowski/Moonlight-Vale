@@ -20,7 +20,7 @@ namespace Moonlight_Vale.Entity
         private const float HEAD_OFFSET = 12f;
         private const float DEFAULT_SPEED = 190f;
         private const float SPRINT_MULTIPLIER = 1.4f;
-        private const float ANIMATION_SPEED = 0.18f;
+        private const float ANIMATION_SPEED = 0.15f;
         private const float TOOL_COOLDOWN = 0.1f;
 
         private float _energy = 100f;
