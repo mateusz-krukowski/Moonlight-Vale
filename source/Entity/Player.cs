@@ -34,6 +34,7 @@ namespace Moonlight_Vale.Entity
         public float AnimationTimer { get; private set; }
         public int CurrentRow { get; private set; }
         public bool Ascending { get; private set; } = true;
+        public bool CanMove { get; set; } = true;
 
         public List<Item> Inventory { get; } = new List<Item>(30);
         public List<Item> ActionBar { get; } = new List<Item>(10);
@@ -107,69 +108,74 @@ namespace Moonlight_Vale.Entity
 
         public void Update(GameTime gameTime, KeyboardState keyboard, MouseState mouse, MouseState previousMouseState)
         {
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            Velocity = Vector2.Zero;
-
-            if (_toolCooldownTimer > 0)
-                _toolCooldownTimer -= deltaTime;
-
-            float currentSpeed = Speed;
-            if (keyboard.IsKeyDown(Keys.LeftShift))
-                currentSpeed *= SPRINT_MULTIPLIER;
-
-            switch (keyboard)
+            if (!CanMove) return;
+            else
             {
-                case var k when k.IsKeyDown(Keys.W):
-                    Move(Vector2.UnitY * -currentSpeed, deltaTime, 2);
-                    break;
-                case var k when k.IsKeyDown(Keys.S):
-                    Move(Vector2.UnitY * currentSpeed, deltaTime, 0);
-                    break;
-                case var k when k.IsKeyDown(Keys.A):
-                    Move(Vector2.UnitX * -currentSpeed, deltaTime, 1, SpriteEffects.None);
-                    break;
-                case var k when k.IsKeyDown(Keys.D):
-                    Move(Vector2.UnitX * currentSpeed, deltaTime, 1, SpriteEffects.FlipHorizontally);
-                    break;
-                default:
-                    Frame = 1;
-                    break;
-            }
 
-            switch (keyboard)
-            {
-                case var k when k.IsKeyDown(Keys.D1): SelectedItem = 0; break;
-                case var k when k.IsKeyDown(Keys.D2): SelectedItem = 1; break;
-                case var k when k.IsKeyDown(Keys.D3): SelectedItem = 2; break;
-                case var k when k.IsKeyDown(Keys.D4): SelectedItem = 3; break;
-                case var k when k.IsKeyDown(Keys.D5): SelectedItem = 4; break;
-                case var k when k.IsKeyDown(Keys.D6): SelectedItem = 5; break;
-                case var k when k.IsKeyDown(Keys.D7): SelectedItem = 6; break;
-                case var k when k.IsKeyDown(Keys.D8): SelectedItem = 7; break;
-                case var k when k.IsKeyDown(Keys.D9): SelectedItem = 8; break;
-                case var k when k.IsKeyDown(Keys.D0): SelectedItem = 9; break;
-            }
+                float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                Velocity = Vector2.Zero;
 
-            if (mouse.LeftButton == ButtonState.Pressed && 
-                previousMouseState.LeftButton == ButtonState.Released && 
-                _toolCooldownTimer <= 0)
-            {
-               if(!overworldScreen.isMouseOverlayingHUD) 
-               {
-                   UseToolOrSeed();
-                   _toolCooldownTimer = TOOL_COOLDOWN;
-               }
-            }
+                if (_toolCooldownTimer > 0)
+                    _toolCooldownTimer -= deltaTime;
 
-            if (mouse.RightButton == ButtonState.Pressed && 
-                previousMouseState.RightButton == ButtonState.Released && 
-                _toolCooldownTimer <= 0)
-            {
-               if(!overworldScreen.isMouseOverlayingHUD && Map is PlayerFarm) 
-               {
-                   HarvestCrop();
-                   _toolCooldownTimer = TOOL_COOLDOWN;
-               }
+                float currentSpeed = Speed;
+                if (keyboard.IsKeyDown(Keys.LeftShift))
+                    currentSpeed *= SPRINT_MULTIPLIER;
+
+                switch (keyboard)
+                {
+                    case var k when k.IsKeyDown(Keys.W):
+                        Move(Vector2.UnitY * -currentSpeed, deltaTime, 2);
+                        break;
+                    case var k when k.IsKeyDown(Keys.S):
+                        Move(Vector2.UnitY * currentSpeed, deltaTime, 0);
+                        break;
+                    case var k when k.IsKeyDown(Keys.A):
+                        Move(Vector2.UnitX * -currentSpeed, deltaTime, 1, SpriteEffects.None);
+                        break;
+                    case var k when k.IsKeyDown(Keys.D):
+                        Move(Vector2.UnitX * currentSpeed, deltaTime, 1, SpriteEffects.FlipHorizontally);
+                        break;
+                    default:
+                        Frame = 1;
+                        break;
+                }
+
+                switch (keyboard)
+                {
+                    case var k when k.IsKeyDown(Keys.D1): SelectedItem = 0; break;
+                    case var k when k.IsKeyDown(Keys.D2): SelectedItem = 1; break;
+                    case var k when k.IsKeyDown(Keys.D3): SelectedItem = 2; break;
+                    case var k when k.IsKeyDown(Keys.D4): SelectedItem = 3; break;
+                    case var k when k.IsKeyDown(Keys.D5): SelectedItem = 4; break;
+                    case var k when k.IsKeyDown(Keys.D6): SelectedItem = 5; break;
+                    case var k when k.IsKeyDown(Keys.D7): SelectedItem = 6; break;
+                    case var k when k.IsKeyDown(Keys.D8): SelectedItem = 7; break;
+                    case var k when k.IsKeyDown(Keys.D9): SelectedItem = 8; break;
+                    case var k when k.IsKeyDown(Keys.D0): SelectedItem = 9; break;
+                }
+
+                if (mouse.LeftButton == ButtonState.Pressed &&
+                    previousMouseState.LeftButton == ButtonState.Released &&
+                    _toolCooldownTimer <= 0)
+                {
+                    if (!overworldScreen.isMouseOverlayingHUD)
+                    {
+                        UseToolOrSeed();
+                        _toolCooldownTimer = TOOL_COOLDOWN;
+                    }
+                }
+
+                if (mouse.RightButton == ButtonState.Pressed &&
+                    previousMouseState.RightButton == ButtonState.Released &&
+                    _toolCooldownTimer <= 0)
+                {
+                    if (!overworldScreen.isMouseOverlayingHUD && Map is PlayerFarm)
+                    {
+                        HarvestCrop();
+                        _toolCooldownTimer = TOOL_COOLDOWN;
+                    }
+                }
             }
         }
 

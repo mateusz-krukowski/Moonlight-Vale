@@ -5,6 +5,7 @@ using FontStashSharp.RichText;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Moonlight_Vale.Entity.Items;
+using Moonlight_Vale.Entity;
 using Moonlight_Vale.Screens;
 using Moonlight_Vale.Systems;
 using Myra.Graphics2D;
@@ -32,6 +33,10 @@ namespace Moonlight_Vale.UI
         private Window settingsWindow;
         private BackpackWindow backpackWindow;
         private Label tooltipLabel;
+
+        // Dialogue System
+        private DialogBox dialogBox;
+        private bool isDialogueActive = false;
 
         // Unified Drag & Drop System
         private bool isDragging = false;
@@ -89,14 +94,69 @@ namespace Moonlight_Vale.UI
         {
             var currentMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
             
-            // Handle unified drag & drop system
-            HandleUnifiedDragAndDrop(currentMouseState);
+            // Check if dialogue is active by checking DialogueSystem instance
+            bool dialogueActive = DialogueSystem.Instance != null;
             
-            UpdateTooltip();
-            backpackWindow.Update();
-            EnsureTooltipOnTop();
+            // Update our internal state to match DialogueSystem
+            if (dialogueActive != isDialogueActive)
+            {
+                isDialogueActive = dialogueActive;
+                
+                // If dialogue just ended, make sure UI is properly reset
+                if (!isDialogueActive)
+                {
+                    HideDialogue();
+                }
+            }
+            
+            // Only handle drag & drop and other updates if dialogue is not active
+            if (!isDialogueActive)
+            {
+                // Handle unified drag & drop system
+                HandleUnifiedDragAndDrop(currentMouseState);
+                
+                UpdateTooltip();
+                backpackWindow.Update();
+            }
+            
             
             previousMouseState = currentMouseState;
+        }
+
+        public void ShowDialogue(string message, Npc npc)
+        {
+            isDialogueActive = true;
+            
+            // Create new DialogBox instance
+            dialogBox = new DialogBox(overworldScreen.Player, npc, this);
+            
+            // Update the message if needed
+            dialogBox.UpdateDialogue(message);
+            
+            // Add DialogBox to HUD
+            hud.Widgets.Add(dialogBox);
+            
+            // Hide action bar while in dialogue
+            itemBar.Visible = false;
+            
+            Console.WriteLine($"Showing dialogue: {npc.Name} says '{message}'");
+        }
+
+        public void HideDialogue()
+        {
+            if (dialogBox != null)
+            {
+                // Remove DialogBox from HUD
+                hud.Widgets.Remove(dialogBox);
+                dialogBox = null;
+            }
+            
+            // Show action bar again
+            itemBar.Visible = true;
+            
+            isDialogueActive = false;
+            
+            Console.WriteLine("Dialogue hidden by HudManager");
         }
 
         private void HandleUnifiedDragAndDrop(MouseState currentMouseState)
@@ -726,6 +786,19 @@ namespace Moonlight_Vale.UI
             {
                 backpackWindow.Toggle();
             }
+        }
+
+        public void HandleDialogueKeyInput()
+        {
+            if (isDialogueActive && dialogBox != null)
+            {
+                dialogBox.HandleKeyboardInput();
+            }
+        }
+
+        public bool IsDialogueActive()
+        {
+            return isDialogueActive;
         }
     }
 }

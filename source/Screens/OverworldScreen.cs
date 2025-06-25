@@ -144,6 +144,27 @@ namespace Moonlight_Vale.Screens
                 Player.PrintInventory();
             }
 
+            // Check for NPC interaction with 'E' key
+            if (keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
+            {
+                // If dialogue is already active, handle it through DialogBox
+                if (HudManager.IsDialogueActive())
+                {
+                    HudManager.HandleDialogueKeyInput();
+                    return;
+                }
+    
+                // Check if player can start new dialogue
+                if (CurrentMap is Town townMap && townMap.CropVendor.CanInteract(Player))
+                {
+                    DialogueSystem.StartDialogue(Player, townMap.CropVendor, HudManager);
+                }
+                else if (CurrentMap is Shop shopMap && shopMap.Shopkeeper.CanInteract(Player))
+                {
+                    DialogueSystem.StartDialogue(Player, shopMap.Shopkeeper, HudManager);
+                }
+            }
+
             HudManager.Update();
             HudManager.UpdateTime();
             HudManager.UpdateItemBarSelection(Player.SelectedItem);

@@ -129,7 +129,7 @@ namespace Moonlight_Vale.Entity
             spriteBatch.Draw(sprite, Position, null, Color.White, 0f, Vector2.Zero, Zoom, SpriteEffects.None, 0f);
         }
 
-        public bool CanInteract(Entity.Player player)
+        public bool CanInteract(Player player)
         {
             if (InteractionBounds == Rectangle.Empty)
             {
@@ -142,8 +142,14 @@ namespace Moonlight_Vale.Entity
                 player.Position.X + (player.SpriteWidth * player.Zoom / 2),
                 player.Position.Y + (player.SpriteHeight * player.Zoom / 2)
             );
-            Console.WriteLine("interaction possible");
-            return InteractionBounds.Contains(playerCenter);
+
+            if (InteractionBounds.Contains(playerCenter))
+            {
+                Console.WriteLine("interaction possible");
+                return true;
+            }
+
+            return false;
         }
     }
 

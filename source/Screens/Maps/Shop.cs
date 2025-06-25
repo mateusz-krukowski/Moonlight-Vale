@@ -37,6 +37,8 @@ public class Shop : IMap
             .SetAfterTradeDialogues([])
             .SetFarewells([])
             .SetPosition(new(97,308))
+            .SetInteractionBounds(160,305,32,48)
+            .SetZoom(2.0f)
             .Build();
     }
     public void DrawMap(SpriteBatch spriteBatch)
