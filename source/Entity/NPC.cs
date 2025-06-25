@@ -26,6 +26,7 @@ namespace Moonlight_Vale.Entity
 
         public List<Item> Inventory { get; set; } = new List<Item>(30);
         public string Name { get; set; } = "Unnamed NPC";
+        public Rectangle InteractionBounds { get; set; } = Rectangle.Empty;
 
         // Make constructor internal so only builder can create instances
         internal Npc()
@@ -126,6 +127,23 @@ namespace Moonlight_Vale.Entity
             if (sprite == null) return;
             
             spriteBatch.Draw(sprite, Position, null, Color.White, 0f, Vector2.Zero, Zoom, SpriteEffects.None, 0f);
+        }
+
+        public bool CanInteract(Entity.Player player)
+        {
+            if (InteractionBounds == Rectangle.Empty)
+            {
+                return false;
+
+            }
+
+            // Check if player's center position is within interaction bounds
+            Vector2 playerCenter = new Vector2(
+                player.Position.X + (player.SpriteWidth * player.Zoom / 2),
+                player.Position.Y + (player.SpriteHeight * player.Zoom / 2)
+            );
+            Console.WriteLine("interaction possible");
+            return InteractionBounds.Contains(playerCenter);
         }
     }
 
@@ -303,11 +321,14 @@ namespace Moonlight_Vale.Entity
         
         public NpcBuilder<T> SetInteractionBounds(Rectangle bounds)
         {
+            npc.InteractionBounds = bounds;
             return this;
+        }
 
-
-
-
+        public NpcBuilder<T> SetInteractionBounds(int x, int y, int width, int height)
+        {
+            npc.InteractionBounds = new Rectangle(x, y, width, height);
+            return this;
         }
 
         public T Build()
