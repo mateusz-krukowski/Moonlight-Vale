@@ -24,11 +24,22 @@ namespace Moonlight_Vale.UI
         private TextButton optionButton1;
         private TextButton optionButton2;
         
+        // Third state widgets (trivia message)
+        private Label triviaNameLabel;
+        private Label triviaText;
+        
         // Right column button (always visible)
         private TextButton continueButton;
         
         // State management
-        private bool showingOptions = false;
+        public enum DialogueState
+        {
+            InitialDialogue,
+            Options,
+            Trivia
+        }
+        
+        private DialogueState currentState = DialogueState.InitialDialogue;
 
         public DialogBox(Player player, Npc npc, HudManager hudManager)
         {
@@ -84,8 +95,9 @@ namespace Moonlight_Vale.UI
             };
             Grid.SetColumn(rightColumn, 1);
             
-            CreateFirstStateWidgets();
-            CreateSecondStateWidgets();
+            CreateFirstStateWidgets();   // Initial dialogue
+            CreateSecondStateWidgets();  // Options
+            CreateThirdStateWidgets();   // Trivia
             CreateContinueButton();
             
             mainGrid.Widgets.Add(leftColumn);
@@ -119,6 +131,7 @@ namespace Moonlight_Vale.UI
                 Font = hudManager.FontSystem.GetFont(2.5f),
                 TextColor = Color.White,
                 HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalSpacing = 10,
                 Wrap = true,
                 Width = 580 // Adjusted for two-column layout
             };
@@ -142,31 +155,33 @@ namespace Moonlight_Vale.UI
             // Option button 1 (no border, no background)
             optionButton1 = new TextButton
             {
-                Text = "How do you do",
-                Font = hudManager.FontSystem.GetFont(2.0f),
+                Text = $"How do you do {npc.Name.Split(' ')[0]}?",
+                Font = hudManager.FontSystem.GetFont(2.2f),
                 Width = 300,
                 Height = 40,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Background = new SolidBrush(Color.Transparent),
-                Border = new SolidBrush(Color.Black),
-                BorderThickness = new Thickness(2),
                 TextColor = Color.White,
-                Padding = new Thickness(8, 8, 8, 8)
+                Padding = new Thickness(8, 2, 8, 2),
+                ContentHorizontalAlignment = HorizontalAlignment.Left,
+                ContentVerticalAlignment = VerticalAlignment.Center,
+                PressedBackground = new SolidBrush(new Color(44,44,44))
             };
             
             // Option button 2 (no border, no background)
             optionButton2 = new TextButton
             {
                 Text = "Show me your goods",
-                Font = hudManager.FontSystem.GetFont(2.0f),
+                Font = hudManager.FontSystem.GetFont(2.2f),
                 Width = 300,
                 Height = 40,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Background = new SolidBrush(Color.Transparent),
-                Border = new SolidBrush(Color.Black),
-                BorderThickness = new Thickness(2),
                 TextColor = Color.White,
-                Padding = new Thickness(8, 8, 8, 8)
+                Padding = new Thickness(8, 2, 8, 2),
+                ContentHorizontalAlignment = HorizontalAlignment.Left,
+                ContentVerticalAlignment = VerticalAlignment.Center,
+                PressedBackground = new SolidBrush(new Color(44,44,44))
             };
             
             // Add button click handlers
@@ -179,6 +194,45 @@ namespace Moonlight_Vale.UI
             leftColumn.Widgets.Add(secondStatePanel);
         }
 
+        private void CreateThirdStateWidgets()
+        {
+            var thirdStatePanel = new VerticalStackPanel
+            {
+                Spacing = 8,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Top,
+                Visible = false // Hidden initially
+            };
+            
+            // NPC name label for trivia
+            triviaNameLabel = new Label
+            {
+                Text = npc.Name,
+                Font = hudManager.FontSystem.GetFont(3.0f),
+                TextColor = Color.Yellow,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(0, 10, 0, 0)
+            };
+            
+            // Trivia text label
+            triviaText = new Label
+            {
+                Text = "", // Will be filled when showing trivia
+                Font = hudManager.FontSystem.GetFont(2.5f),
+                TextColor = Color.White,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Wrap = true,
+                VerticalSpacing = 10,
+                Width = 580
+            };
+            
+            thirdStatePanel.Widgets.Add(triviaNameLabel);
+            thirdStatePanel.Widgets.Add(triviaText);
+            
+            leftColumn.Widgets.Add(thirdStatePanel);
+        }
+
         private void CreateContinueButton()
         {
             continueButton = new TextButton
@@ -186,13 +240,14 @@ namespace Moonlight_Vale.UI
                 Text = "Continue (E)",
                 Font = hudManager.FontSystem.GetFont(1.8f),
                 Width = 150,
-                Height = 150,
+                Height = 60,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Bottom,
                 Background = new SolidBrush(new Color(142, 105, 67)),
                 Border = new SolidBrush(Color.White),
                 BorderThickness = new Thickness(2),
-                TextColor = Color.White
+                TextColor = Color.White,
+                PressedBackground = new SolidBrush(new Color(44,44,44))
             };
             
             continueButton.Click += (s, e) => HandleContinueClick();
@@ -202,40 +257,92 @@ namespace Moonlight_Vale.UI
 
         private void HandleContinueClick()
         {
-            if (!showingOptions)
+            System.Console.WriteLine($"HandleContinueClick called - current state: {currentState}");
+            
+            switch (currentState)
             {
-                // Switch to options view
-                ShowOptions();
-            }
-            else
-            {
-                // End dialogue directly through HudManager
-                hudManager.HideDialogue();
-                
-                // Re-enable player movement
-                if (player != null)
-                {
-                    player.CanMove = true;
-                }
+                case DialogueState.InitialDialogue:
+                    // From initial dialogue, go to options
+                    System.Console.WriteLine("Switching from Initial Dialogue to Options");
+                    ShowOptions();
+                    break;
+                    
+                case DialogueState.Options:
+                    // From options, end dialogue
+                    System.Console.WriteLine("Ending dialogue from Options");
+                    EndDialogue();
+                    break;
+                    
+                case DialogueState.Trivia:
+                    // From trivia, go back to options
+                    System.Console.WriteLine("Switching from Trivia back to Options");
+                    ShowOptions();
+                    break;
             }
         }
 
         private void HandleOptionClick(string optionType)
         {
-            // Handle different option types
+            System.Console.WriteLine($"HandleOptionClick called with option: {optionType}");
+            
             switch (optionType)
             {
                 case "greeting":
-                    // Handle greeting option
-                    System.Console.WriteLine("Player chose greeting option");
+                    // Show trivia message
+                    System.Console.WriteLine("Player chose greeting option - showing trivia");
+                    ShowTrivia();
                     break;
+                    
                 case "shop":
-                    // Handle shop option
-                    System.Console.WriteLine("Player chose shop option");
+                    // Handle shop option - end dialogue for now
+                    System.Console.WriteLine("Player chose shop option - ending dialogue");
+                    //hudManager.OpenNPCBackpack(npc);
                     break;
             }
+        }
+
+        private void ShowInitialDialogue()
+        {
+            System.Console.WriteLine("Showing Initial Dialogue state");
+            currentState = DialogueState.InitialDialogue;
             
-            // End dialogue directly through HudManager
+            // Show first state panel, hide others
+            leftColumn.Widgets[0].Visible = true;  // Initial dialogue panel
+            leftColumn.Widgets[1].Visible = false; // Options panel
+            leftColumn.Widgets[2].Visible = false; // Trivia panel
+        }
+
+        private void ShowOptions()
+        {
+            System.Console.WriteLine("Showing Options state");
+            currentState = DialogueState.Options;
+            
+            // Show second state panel, hide others
+            leftColumn.Widgets[0].Visible = false; // Initial dialogue panel
+            leftColumn.Widgets[1].Visible = true;  // Options panel
+            leftColumn.Widgets[2].Visible = false; // Trivia panel
+        }
+
+        private void ShowTrivia()
+        {
+            System.Console.WriteLine("Showing Trivia state");
+            currentState = DialogueState.Trivia;
+            
+            // Get trivia message from NPC
+            string triviaMessage = npc.GetRandomTrivia();
+            triviaText.Text = triviaMessage;
+            
+            // Show third state panel, hide others
+            leftColumn.Widgets[0].Visible = false; // Initial dialogue panel
+            leftColumn.Widgets[1].Visible = false; // Options panel
+            leftColumn.Widgets[2].Visible = true;  // Trivia panel
+        }
+
+        private void EndDialogue()
+        {
+            System.Console.WriteLine("Ending dialogue");
+            
+            // End dialogue through HudManager
             hudManager.HideDialogue();
             
             // Re-enable player movement
@@ -243,20 +350,6 @@ namespace Moonlight_Vale.UI
             {
                 player.CanMove = true;
             }
-        }
-
-        private void ShowInitialDialogue()
-        {
-            showingOptions = false;
-            leftColumn.Widgets[0].Visible = true;  // First state panel
-            leftColumn.Widgets[1].Visible = false; // Second state panel
-        }
-
-        private void ShowOptions()
-        {
-            showingOptions = true;
-            leftColumn.Widgets[0].Visible = false; // First state panel
-            leftColumn.Widgets[1].Visible = true;  // Second state panel
         }
 
         public void UpdateDialogue(string message)
@@ -270,6 +363,7 @@ namespace Moonlight_Vale.UI
         // Handle keyboard input (E key) - same behavior as Continue button
         public void HandleKeyboardInput()
         {
+            System.Console.WriteLine("HandleKeyboardInput called - delegating to HandleContinueClick");
             HandleContinueClick();
         }
     }

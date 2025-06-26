@@ -147,22 +147,7 @@ namespace Moonlight_Vale.Screens
             // Check for NPC interaction with 'E' key
             if (keyboard.IsKeyDown(Keys.E) && previousKeyboardState.IsKeyUp(Keys.E))
             {
-                // If dialogue is already active, handle it through DialogBox
-                if (HudManager.IsDialogueActive())
-                {
-                    HudManager.HandleDialogueKeyInput();
-                    return;
-                }
-    
-                // Check if player can start new dialogue
-                if (CurrentMap is Town townMap && townMap.CropVendor.CanInteract(Player))
-                {
-                    DialogueSystem.StartDialogue(Player, townMap.CropVendor, HudManager);
-                }
-                else if (CurrentMap is Shop shopMap && shopMap.Shopkeeper.CanInteract(Player))
-                {
-                    DialogueSystem.StartDialogue(Player, shopMap.Shopkeeper, HudManager);
-                }
+                HandleNpcInteraction();
             }
 
             HudManager.Update();
@@ -321,6 +306,53 @@ namespace Moonlight_Vale.Screens
             Camera.Zoom = Zoom;
 
             Console.WriteLine($"Switched to Town - Player: {Player.Position}, Camera: {Camera.Position}");
+        }
+        
+        private void HandleNpcInteraction()
+        {
+            Console.WriteLine("HandleNpcInteraction() called");
+    
+            // If dialogue is active, handle it EXACTLY like Continue button
+            if (DialogueSystem.Instance != null)
+            {
+                Console.WriteLine("Dialogue is active - attempting to handle through HudManager");
+        
+                // Try to handle through HudManager (works with private dialogBox)
+                if (HudManager.HandleDialogueKeyboardInput())
+                {
+                    Console.WriteLine("Successfully handled dialogue through HudManager");
+                    return;
+                }
+        
+                Console.WriteLine("Failed to handle through HudManager - no DialogBox found");
+                // Continue to cleanup below
+            }
+    
+            // If DialogueSystem exists but no DialogBox, something is wrong - clean up
+            if (DialogueSystem.Instance != null)
+            {
+                Console.WriteLine("DialogueSystem exists but no DialogBox - ending dialogue");
+                DialogueSystem.Instance.EndDialogue();
+                return;
+            }
+
+            Console.WriteLine("No active dialogue - checking for NPC interaction");
+    
+            // Check if player can start new dialogue with NPCs
+            if (CurrentMap is Town townMap && townMap.CropVendor.CanInteract(Player))
+            {
+                Console.WriteLine("Starting dialogue with CropVendor");
+                DialogueSystem.StartDialogue(Player, townMap.CropVendor, HudManager);
+            }
+            else if (CurrentMap is Shop shopMap && shopMap.Shopkeeper.CanInteract(Player))
+            {
+                Console.WriteLine("Starting dialogue with Shopkeeper");
+                DialogueSystem.StartDialogue(Player, shopMap.Shopkeeper, HudManager);
+            }
+            else
+            {
+                Console.WriteLine("No NPC in interaction range");
+            }
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -496,24 +528,7 @@ namespace Moonlight_Vale.Screens
             spriteBatch.Draw(TargetSprite, new Rectangle((int)tileWorldPos.X, (int)tileWorldPos.Y,
                 tileSize * 2, tileSize * 2), Color.White);
         }
-
-        private void DrawLayer(SpriteBatch spriteBatch, Layer layer)
-        {
-            if (CurrentMap?.TileMap?.Tilesets == null || !CurrentMap.TileMap.Tilesets.Any())
-                return;
-
-            int scaledTileSize = (int)(CurrentMap.TileMap.TileWidth * Zoom);
-
-            for (int y = 0; y < layer.Height; y++)
-            for (int x = 0; x < layer.Width; x++)
-            {
-                int tileIndex = layer.GetTile(x, y);
-                var tileRect = new Rectangle();
-                if (!CurrentMap.TileMap.Tilesets.First().Value.MapTileToRect(tileIndex, ref tileRect)) continue;
-
-                spriteBatch.Draw(CurrentMap.TileSet, new Vector2(x, y) * scaledTileSize, tileRect, Color.White, 0, Vector2.Zero, Zoom, SpriteEffects.None, 0);
-            }
-        }
+        
 
         public override void Unload()
         {

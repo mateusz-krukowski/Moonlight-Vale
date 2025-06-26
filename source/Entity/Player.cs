@@ -35,6 +35,7 @@ namespace Moonlight_Vale.Entity
         public int CurrentRow { get; private set; }
         public bool Ascending { get; private set; } = true;
         public bool CanMove { get; set; } = true;
+        public bool IsTrading { get; set; } = false;
 
         public List<Item> Inventory { get; } = new List<Item>(30);
         public List<Item> ActionBar { get; } = new List<Item>(10);
@@ -42,6 +43,7 @@ namespace Moonlight_Vale.Entity
         public OverworldScreen overworldScreen { get; set; }
         
         public string Name { get; private set; } = "Player";
+        public int Gold { get; set; } = 0; 
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public Vector2 Direction { get; set; }

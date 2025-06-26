@@ -71,10 +71,68 @@ namespace Moonlight_Vale.Entity
             return GetRandomDialogue("farewells");
         }
 
-        public string GetRandomTrivia()
+      public string GetRandomTrivia()
+{
+    var random = new Random();
+    
+    // Generic trivia that all NPCs can say
+    var genericTrivia = new[]
+    {
+        "Life in this town is peaceful. I love watching the seasons change.",
+        "The weather has been quite nice lately, perfect for farming!",
+        "I've lived here all my life. This place holds many memories for me.",
+        "The community here is wonderful. Everyone helps each other out.",
+        "There's something magical about watching crops grow from tiny seeds.",
+        "The sunrise over the fields is always a beautiful sight to behold.",
+        "I remember when this town was much smaller. Time really flies by.",
+        "Nothing beats the smell of fresh soil after a good rain.",
+        "The local festivals are always so much fun. Do you participate?",
+        "Sometimes I just sit and watch the clouds roll by. Very peaceful."
+    };
+    
+    // Specific trivia for different NPCs
+    if (Name.Contains("Market Master") || Name.Contains("Wilhelm"))
+    {
+        var marketSpecificTrivia = new[]
         {
-            return GetRandomDialogue("trivia");
-        }
+            "I've been running this market for over 20 years. Seen all kinds of crops come and go!",
+            "Did you know that carrots were originally purple? Orange carrots are a relatively modern invention!",
+            "The best time to plant tomatoes is right after the last frost. They're quite sensitive to cold.",
+            "I once sold a pumpkin that weighed over 50 pounds! The farmer was so proud of it.",
+            "Market prices fluctuate based on seasons. Smart farmers know when to plant and when to sell!",
+            "The secret to good business is treating every customer like family.",
+            "I can tell the quality of produce just by looking at it. Years of experience!",
+            "Some farmers bring me the most unusual vegetables. Nature is full of surprises."
+        };
+        
+        // Combine market-specific and generic trivia
+        var allMarketTrivia = marketSpecificTrivia.Concat(genericTrivia).ToArray();
+        return allMarketTrivia[random.Next(allMarketTrivia.Length)];
+    }
+    else if (Name.Contains("Shopkeeper"))
+    {
+        var shopSpecificTrivia = new[]
+        {
+            "This shop has been in my family for three generations. My grandfather started it with just a few tools.",
+            "The secret to good farming tools is proper maintenance. A well-cared hoe can last decades!",
+            "I import some of my best tools from the mountain regions. The blacksmiths there are legendary.",
+            "Did you know that watering plants in the evening is better than morning? Less evaporation!",
+            "Every season brings different challenges. That's why having good, reliable tools is essential.",
+            "A good farmer is only as good as their tools. I make sure to stock the best quality.",
+            "I've seen farming techniques change over the years. Innovation is important!",
+            "The sound of a well-made tool working the soil is music to my ears."
+        };
+        
+        // Combine shop-specific and generic trivia
+        var allShopTrivia = shopSpecificTrivia.Concat(genericTrivia).ToArray();
+        return allShopTrivia[random.Next(allShopTrivia.Length)];
+    }
+    else
+    {
+        // Other NPCs get only generic trivia
+        return genericTrivia[random.Next(genericTrivia.Length)];
+    }
+}
 
         protected string GetRandomDialogue(string category)
         {

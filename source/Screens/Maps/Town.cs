@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Moonlight_Vale.Entity;
+using Moonlight_Vale.Entity.Items;
 using Squared.Tiled;
 
 namespace Moonlight_Vale.Screens.Maps
@@ -82,6 +83,7 @@ namespace Moonlight_Vale.Screens.Maps
                 .SetPosition(new Vector2(735,745))
                 .SetInteractionBounds(new Rectangle(735,780,32,32))
                 .SetZoom(2.0f)
+                .AddTradeItem(Crop.CreateCrop("carrot"))
                 .Build();
 
         }

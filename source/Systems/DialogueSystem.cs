@@ -45,10 +45,10 @@ namespace Moonlight_Vale.Systems
         
         public void HandleInput()
         {
-            if (IsActive)
+            if (IsActive && hudManager?.dialogBox != null)
             {
-                // Close dialogue on E key press
-                EndDialogue();
+                // Use the same logic as Continue button
+                hudManager.dialogBox.HandleKeyboardInput();
             }
         }
         

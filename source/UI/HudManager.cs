@@ -35,7 +35,7 @@ namespace Moonlight_Vale.UI
         private Label tooltipLabel;
 
         // Dialogue System
-        private DialogBox dialogBox;
+        public DialogBox dialogBox;
         private bool isDialogueActive = false;
 
         // Unified Drag & Drop System
@@ -174,6 +174,23 @@ namespace Moonlight_Vale.UI
             
             Console.WriteLine("Dialogue hidden by HudManager");
         }
+        
+        public bool HandleDialogueKeyboardInput()
+        {
+            Console.WriteLine("HudManager.HandleDialogueKeyboardInput() called");
+    
+            if (dialogBox != null)
+            {
+                Console.WriteLine("Found DialogBox - calling HandleKeyboardInput()");
+                dialogBox.HandleKeyboardInput();
+                return true;
+            }
+    
+            Console.WriteLine("No DialogBox found");
+            return false;
+        }
+        
+        
 
         private void HandleUnifiedDragAndDrop(MouseState currentMouseState)
         {
