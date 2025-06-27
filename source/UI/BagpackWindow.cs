@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Moonlight_Vale.Entity;
 using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Myra.Graphics2D;
@@ -43,6 +44,7 @@ namespace Moonlight_Vale.UI
         {
             // Just update inventory slots - drag & drop is handled by HudManager now
             UpdateInventorySlots();
+            UpdateGoldDisplay(overworldScreen.Player.Gold);
         }
 
         public void Toggle()

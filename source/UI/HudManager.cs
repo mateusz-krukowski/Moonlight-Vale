@@ -98,52 +98,38 @@ namespace Moonlight_Vale.UI
         public void Update()
         {
             var currentMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
-            
-            // Check if dialogue is active by checking DialogueSystem instance
+    
+            // Sprawdź, czy dialog w ogóle jest aktywny
             bool dialogueActive = DialogueSystem.Instance != null;
-            
-            // Update our internal state to match DialogueSystem
-            if (dialogueActive != isDialogueActive)
-            {
-                isDialogueActive = dialogueActive;
-                
-                // If dialogue just ended, make sure UI is properly reset
-                if (!isDialogueActive)
-                {
-                    HideDialogue();
-                    // Also close trade windows when dialogue ends
-                    CloseTradeWindows();
-                }
-            }
-            
-            // IMPROVED LOGIC: More granular control over what's allowed during dialogue
+    
+            // Synchronizuj tylko flagę
+            isDialogueActive = dialogueActive;
+
+            // Pozwól na DnD jeśli nie ma dialogu lub jeśli jest handel
             bool allowDragAndDrop = !isDialogueActive || IsTrading();
-            
+
             if (allowDragAndDrop)
             {
-                // Handle unified drag & drop system
                 HandleUnifiedDragAndDrop(currentMouseState);
             }
             else
             {
-                // During normal dialogue, allow limited drag & drop within player inventory only
                 HandleLimitedDragAndDrop(currentMouseState);
             }
-            
-            // These updates can always happen
+
             UpdateTooltip();
             backpackWindow.Update();
-            
-            // Update NPC inventory window if trading
+
             if (IsTrading())
             {
                 npcInventoryWindow.Update();
             }
-            
+
             EnsureTooltipOnTop();
-            
+
             previousMouseState = currentMouseState;
         }
+
 
         private void HandleLimitedDragAndDrop(MouseState currentMouseState)
         {
@@ -247,17 +233,17 @@ namespace Moonlight_Vale.UI
                 hud.Widgets.Remove(npcInventoryWindow);
                 npcInventoryWindow = null;
             }
-            
-            // Hide player backpack
+
             if (backpackWindow != null)
             {
                 backpackWindow.Visible = false;
             }
-            
+
             currentTradingNpc = null;
-            
+
             Console.WriteLine("Closed trade windows");
         }
+
 
         public bool IsTrading()
         {

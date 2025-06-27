@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Moonlight_Vale.Entity;
+using Moonlight_Vale.Entity.Items;
 using Squared.Tiled;
 
 namespace Moonlight_Vale.Screens.Maps;
@@ -40,6 +41,8 @@ public class Shop : IMap
             .SetInteractionBounds(160,305,32,48)
             .SetZoom(2.0f)
             .Build();
+        Shopkeeper.AddItemToInventory(Seed.CreateSeed("parsnip"),10);
+        Shopkeeper.AddItemToInventory(Seed.CreateSeed("carrot"),10);
     }
     public void DrawMap(SpriteBatch spriteBatch)
     {

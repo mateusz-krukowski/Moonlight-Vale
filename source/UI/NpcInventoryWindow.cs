@@ -15,6 +15,7 @@ namespace Moonlight_Vale.UI
     public class NpcInventoryWindow : Window
     {
         private OverworldScreen overworldScreen;
+        private Npc npc; // Store reference to the NPC
         private Grid inventoryGrid;
         private List<Panel> inventorySlots;
         private Label goldLabel;
@@ -22,6 +23,7 @@ namespace Moonlight_Vale.UI
         public NpcInventoryWindow(OverworldScreen overworldScreen, Npc npc)
         {
             this.overworldScreen = overworldScreen;
+            this.npc = npc; // Store NPC reference
             inventorySlots = new List<Panel>();
             
             // Set up window properties
@@ -35,6 +37,7 @@ namespace Moonlight_Vale.UI
             Visible = false;
             
             Initialize();
+            Console.WriteLine(npc.Inventory[0]);
         }
 
         public void Initialize()
@@ -44,7 +47,7 @@ namespace Moonlight_Vale.UI
 
         public void Update()
         {
-            // Just update inventory slots - drag & drop is handled by HudManager now
+            // Update inventory slots - drag & drop is handled by HudManager now
             UpdateInventorySlots();
         }
 
@@ -118,37 +121,25 @@ namespace Moonlight_Vale.UI
                 }
             }
 
-            // Create gold label
-            goldLabel = new Label
-            {
-                Text = "Gold: 0",
-                Font = overworldScreen.FontSystem.GetFont(2),
-                TextColor = Color.White,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(5, 10, 0, 5)
-            };
+            // Create info label showing player's gold (since player buys from NPC)
 
             mainPanel.Widgets.Add(inventoryGrid);
-            mainPanel.Widgets.Add(goldLabel);
 
             Content = mainPanel;
         }
 
         private void UpdateInventorySlots()
         {
-            var player = overworldScreen.Player;
-
+            // Use NPC inventory instead of player inventory
             for (int i = 0; i < inventorySlots.Count; i++)
             {
                 var slot = inventorySlots[i];
                 slot.Widgets.Clear();
 
                 // Show different background for dragged item slot if HudManager is dragging from inventory
-                // Since we don't have direct access to HudManager's drag state, we'll use a simpler approach
                 if (IsDragging())
                 {
-                    // For now, just use normal styling - HudManager will handle visual feedback
+                    // Normal styling - HudManager will handle visual feedback
                     slot.Background = new SolidBrush(new Color(60, 45, 30));
                     slot.Border = new SolidBrush(Color.Gray);
                     slot.BorderThickness = new Thickness(2);
@@ -161,10 +152,10 @@ namespace Moonlight_Vale.UI
                     slot.BorderThickness = new Thickness(2);
                 }
 
-                // Check if there's an item at this index in inventory
-                if (i < player.Inventory.Count && player.Inventory[i] != null)
+                // Check if there's an item at this index in NPC's inventory
+                if (i < npc.Inventory.Count && npc.Inventory[i] != null)
                 {
-                    var item = player.Inventory[i];
+                    var item = npc.Inventory[i];
                     
                     if (item.Icon != null)
                     {
@@ -192,6 +183,18 @@ namespace Moonlight_Vale.UI
                             };
                             slot.Widgets.Add(amountLabel);
                         }
+
+                        // Add price label showing the cost to buy this item
+                        var priceLabel = new Label
+                        {
+                            Text = $"${item.Price}",
+                            Font = overworldScreen.FontSystem.GetFont(1.2f),
+                            TextColor = Color.Yellow,
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            VerticalAlignment = VerticalAlignment.Bottom,
+                            Margin = new Thickness(2, 0, 0, 2)
+                        };
+                        slot.Widgets.Add(priceLabel);
                     }
                     else
                     {
@@ -209,14 +212,8 @@ namespace Moonlight_Vale.UI
                 }
             }
         }
-
-        public void UpdateGoldDisplay(int goldAmount)
-        {
-            if (goldLabel != null)
-            {
-                goldLabel.Text = $"Gold: {goldAmount}";
-            }
-        }
+        
+        
 
         /// <summary>
         /// Helper method for external drag & drop systems to highlight slots

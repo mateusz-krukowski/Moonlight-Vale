@@ -43,7 +43,7 @@ namespace Moonlight_Vale.Entity
         public OverworldScreen overworldScreen { get; set; }
         
         public string Name { get; private set; } = "Player";
-        public int Gold { get; set; } = 0; 
+        public int Gold { get; set; } = 150; 
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public Vector2 Direction { get; set; }

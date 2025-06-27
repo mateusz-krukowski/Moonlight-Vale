@@ -331,7 +331,6 @@ namespace Moonlight_Vale.Entity
         /// </summary>
         public bool MoveToPlayerInventory(int npcInventoryIndex, int playerInventoryIndex, Player player)
         {
-            // Enhanced null safety checks
             if (player == null)
             {
                 Console.WriteLine("Player is null!");
@@ -350,55 +349,48 @@ namespace Moonlight_Vale.Entity
                 Console.WriteLine("No item at NPC inventory index");
                 return false;
             }
-            
-            // Check if player has enough gold
-            if (player.Gold < npcItem.Price)
+
+            int amountToSell = npcItem.Amount;
+            if (amountToSell <= 0)
             {
-                Console.WriteLine($"Player doesn't have enough gold! Need ${npcItem.Price}, has ${player.Gold}");
+                Console.WriteLine("Nothing to sell!");
                 return false;
             }
 
-            // Ensure player inventory is large enough (like Player does)
+            int totalPrice = npcItem.Price * amountToSell;
+            
+            if (player.Gold < totalPrice)
+            {
+                Console.WriteLine($"Player doesn't have enough gold! Need ${totalPrice}, has ${player.Gold}");
+                return false;
+            }
+            
             while (player.Inventory.Count <= playerInventoryIndex)
             {
                 player.Inventory.Add(null);
             }
 
-            // Handle existing item at target slot in player inventory
             var existingPlayerItem = player.Inventory[playerInventoryIndex];
             
-            // Charge player gold
-            player.Gold -= npcItem.Price;
+            player.Gold -= totalPrice;
             
-            // Create copy of NPC item for player (buy only 1 at a time)
             var itemCopyForPlayer = CreateItemCopy(npcItem);
-            itemCopyForPlayer.Amount = 1;
-            
-            // Load content for the new item if ContentManager is available
+            itemCopyForPlayer.Amount = amountToSell;
+
             if (_contentManager != null)
             {
                 itemCopyForPlayer.LoadContent(_contentManager);
             }
+
             
-            // Move existing player item to NPC inventory slot (if any)
-            Inventory[npcInventoryIndex] = existingPlayerItem;
-            
-            // Place bought item in player inventory
             player.Inventory[playerInventoryIndex] = itemCopyForPlayer;
             
-            // Decrease NPC item amount (with null safety)
-            if (existingPlayerItem == null) // If we didn't get anything in return
-            {
-                npcItem.Amount--;
-                if (npcItem.Amount <= 0)
-                {
-                    Inventory[npcInventoryIndex] = null;
-                }
-            }
-            
-            Console.WriteLine($"Player bought {itemCopyForPlayer.Name} for ${npcItem.Price}");
+            Inventory[npcInventoryIndex] = existingPlayerItem;
+
+            Console.WriteLine($"Player bought {itemCopyForPlayer.Name} x{amountToSell} for ${totalPrice}");
             return true;
         }
+
 
         /// <summary>
         /// Move item from Player inventory to NPC inventory (Player selling to NPC)
@@ -406,7 +398,6 @@ namespace Moonlight_Vale.Entity
         /// </summary>
         public bool MoveFromPlayerInventory(int playerInventoryIndex, int npcInventoryIndex, Player player)
         {
-            // Enhanced null safety checks
             if (player == null)
             {
                 Console.WriteLine("Player is null!");
@@ -431,41 +422,35 @@ namespace Moonlight_Vale.Entity
 
             var existingNpcItem = Inventory[npcInventoryIndex];
             
-            // Calculate sell price (NPC buys at 70% of item value)
-            int sellPrice = (int)(playerItem.Price * 0.7f);
+            int amountToSell = playerItem.Amount;
+
+            if (amountToSell <= 0)
+            {
+                Console.WriteLine("Nothing to sell!");
+                return false;
+            }
+
             
-            // Give player gold
+            int sellPrice = (int)(playerItem.Price * 0.7f) * amountToSell;
+            
             player.Gold += sellPrice;
             
-            // Create copy of player item for NPC (sell only 1 at a time)
             var itemCopyForNpc = CreateItemCopy(playerItem);
-            itemCopyForNpc.Amount = 1;
-            
-            // Load content for the new item if ContentManager is available
+            itemCopyForNpc.Amount = amountToSell;
+
             if (_contentManager != null)
             {
                 itemCopyForNpc.LoadContent(_contentManager);
             }
             
-            // Move existing NPC item to player inventory slot (if any)
-            player.Inventory[playerInventoryIndex] = existingNpcItem;
-            
-            // Place sold item in NPC inventory
             Inventory[npcInventoryIndex] = itemCopyForNpc;
             
-            // Decrease player item amount (with null safety)
-            if (existingNpcItem == null) // If we didn't get anything in return
-            {
-                playerItem.Amount--;
-                if (playerItem.Amount <= 0)
-                {
-                    player.Inventory[playerInventoryIndex] = null;
-                }
-            }
-            
-            Console.WriteLine($"Player sold {itemCopyForNpc.Name} for ${sellPrice}");
+            player.Inventory[playerInventoryIndex] = existingNpcItem;
+
+            Console.WriteLine($"Player sold {itemCopyForNpc.Name} x{amountToSell} for ${sellPrice}");
             return true;
         }
+
 
         /// <summary>
         /// Swap items between NPC and Player inventories (direct exchange)
@@ -731,7 +716,7 @@ namespace Moonlight_Vale.Entity
         {
             if (npc is Vendor vendor)
             {
-                vendor.AddTradeItem(item);
+                vendor.AddItemToInventory(item);
                 return this;
             }
 
