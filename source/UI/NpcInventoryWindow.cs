@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Moonlight_Vale.Entity;
 using Moonlight_Vale.Entity.Items;
 using Moonlight_Vale.Screens;
 using Myra.Graphics2D;
@@ -11,24 +12,26 @@ using Myra.Graphics2D.TextureAtlases;
 
 namespace Moonlight_Vale.UI
 {
-    public class BackpackWindow : Window
+    public class NpcInventoryWindow : Window
     {
-        public OverworldScreen overworldScreen;
+        private OverworldScreen overworldScreen;
         private Grid inventoryGrid;
         private List<Panel> inventorySlots;
         private Label goldLabel;
 
-        public BackpackWindow(OverworldScreen overworldScreen)
+        public NpcInventoryWindow(OverworldScreen overworldScreen, Npc npc)
         {
             this.overworldScreen = overworldScreen;
             inventorySlots = new List<Panel>();
             
             // Set up window properties
-            Title = "Backpack";
+            Title = npc.Name;
             Width = 450;
             Height = 420;
             Background = new SolidBrush(new Color(80, 60, 40));
             Padding = new Thickness(10);
+            Left = 400;
+            Top = 200;
             Visible = false;
             
             Initialize();
@@ -60,10 +63,7 @@ namespace Moonlight_Vale.UI
         {
             return inventorySlots;
         }
-
-        /// <summary>
-        /// Check if HudManager is currently dragging (BackpackWindow no longer handles its own drag & drop)
-        /// </summary>
+        
         public bool IsDragging()
         {
             // Since HudManager now handles all drag & drop, we delegate to it

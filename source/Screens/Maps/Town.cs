@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -86,6 +87,29 @@ namespace Moonlight_Vale.Screens.Maps
                 .AddTradeItem(Crop.CreateCrop("carrot"))
                 .Build();
 
+        }
+        
+        private void SetupCropVendorInventory()
+        {
+            // Ensure inventory list is properly sized
+            while (CropVendor.Inventory.Count < 30)
+            {
+                CropVendor.Inventory.Add(null);
+            }
+    
+            try
+            {
+                // Add some crops (that NPC might buy from player)
+                var carrotCrop = Crop.CreateCrop("carrot");
+                carrotCrop.Amount = 5;
+                CropVendor.Inventory[1] = carrotCrop;
+        
+                Console.WriteLine($"Setup {CropVendor.Name} inventory with {CropVendor.Inventory.Count(i => i != null)} items");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting up CropVendor inventory: {ex.Message}");
+            }
         }
         
         public void DrawMap(SpriteBatch spriteBatch)

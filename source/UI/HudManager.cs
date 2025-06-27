@@ -18,7 +18,8 @@ namespace Moonlight_Vale.UI
     public enum DragSource
     {
         ActionBar,
-        Inventory
+        Inventory,
+        NpcInventory
     }
 
     public class HudManager
@@ -32,11 +33,15 @@ namespace Moonlight_Vale.UI
         private VerticalStackPanel inGameMenu;
         private Window settingsWindow;
         private BackpackWindow backpackWindow;
+        private NpcInventoryWindow npcInventoryWindow;
         private Label tooltipLabel;
 
         // Dialogue System
         public DialogBox dialogBox;
         private bool isDialogueActive = false;
+
+        // Trading System
+        private Npc currentTradingNpc;
 
         // Unified Drag & Drop System
         private bool isDragging = false;
@@ -106,22 +111,157 @@ namespace Moonlight_Vale.UI
                 if (!isDialogueActive)
                 {
                     HideDialogue();
+                    // Also close trade windows when dialogue ends
+                    CloseTradeWindows();
                 }
             }
             
-            // Only handle drag & drop and other updates if dialogue is not active
-            if (!isDialogueActive)
+            // IMPROVED LOGIC: More granular control over what's allowed during dialogue
+            bool allowDragAndDrop = !isDialogueActive || IsTrading();
+            
+            if (allowDragAndDrop)
             {
                 // Handle unified drag & drop system
                 HandleUnifiedDragAndDrop(currentMouseState);
-                
-                UpdateTooltip();
-                backpackWindow.Update();
+            }
+            else
+            {
+                // During normal dialogue, allow limited drag & drop within player inventory only
+                HandleLimitedDragAndDrop(currentMouseState);
+            }
+            
+            // These updates can always happen
+            UpdateTooltip();
+            backpackWindow.Update();
+            
+            // Update NPC inventory window if trading
+            if (IsTrading())
+            {
+                npcInventoryWindow.Update();
             }
             
             EnsureTooltipOnTop();
             
             previousMouseState = currentMouseState;
+        }
+
+        private void HandleLimitedDragAndDrop(MouseState currentMouseState)
+        {
+            var mousePosition = currentMouseState.Position;
+            
+            // Start drag detection - only within player inventory
+            if (!isDragging && 
+                currentMouseState.LeftButton == ButtonState.Pressed && 
+                previousMouseState.LeftButton == ButtonState.Released)
+            {
+                // Only allow dragging within inventory if backpack is visible
+                if (backpackWindow.Visible)
+                {
+                    int inventoryIndex = GetInventorySlotAtMouse(mousePosition);
+                    if (inventoryIndex != -1)
+                    {
+                        var player = overworldScreen.Player;
+                        if (inventoryIndex < player.Inventory.Count && player.Inventory[inventoryIndex] != null)
+                        {
+                            StartDrag(DragSource.Inventory, inventoryIndex, player.Inventory[inventoryIndex], mousePosition);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Update drag position
+            if (isDragging && draggedIcon != null)
+            {
+                draggedIcon.Left = mousePosition.X - 32;
+                draggedIcon.Top = mousePosition.Y - 32;
+            }
+            
+            // End drag detection - only allow drops within inventory
+            if (isDragging && 
+                currentMouseState.LeftButton == ButtonState.Released && 
+                previousMouseState.LeftButton == ButtonState.Pressed)
+            {
+                int targetInventoryIndex = GetInventorySlotAtMouse(mousePosition);
+                
+                bool dropSuccessful = false;
+                
+                if (targetInventoryIndex != -1 && backpackWindow.Visible && dragSource == DragSource.Inventory)
+                {
+                    // Only allow inventory to inventory moves during dialogue
+                    if (targetInventoryIndex != draggedItemIndex)
+                    {
+                        overworldScreen.Player.SwapInventoryItems(draggedItemIndex, targetInventoryIndex);
+                        dropSuccessful = true;
+                        Console.WriteLine($"Swapped inventory items during dialogue: {draggedItemIndex} <-> {targetInventoryIndex}");
+                    }
+                }
+                
+                if (!dropSuccessful)
+                {
+                    Console.WriteLine("Limited drag cancelled - only inventory reorganization allowed during dialogue");
+                }
+                
+                CleanupDrag();
+            }
+        }
+
+        public void OpenTradeWindows(Npc npc)
+        {
+            currentTradingNpc = npc;
+            
+            // Create NPC inventory window on the left
+            npcInventoryWindow = new NpcInventoryWindow(overworldScreen, npc);
+            npcInventoryWindow.Visible = true;
+            
+            // Position player backpack on the right
+            if (backpackWindow.Parent == null)
+            {
+                int inGameMenuIndex = hud.Widgets.IndexOf(inGameMenu);
+                if (inGameMenuIndex >= 0)
+                {
+                    hud.Widgets.Insert(inGameMenuIndex, backpackWindow);
+                }
+                else
+                {
+                    int insertIndex = Math.Max(0, hud.Widgets.Count - 1);
+                    hud.Widgets.Insert(insertIndex, backpackWindow);
+                }
+            }
+            
+            // Reposition player backpack to the right side
+            backpackWindow.Left = 1000; // RIGHT SIDE
+            backpackWindow.Top = 200;
+            backpackWindow.Visible = true;
+            
+            // Add NPC window to HUD
+            hud.Widgets.Add(npcInventoryWindow);
+            
+            Console.WriteLine($"Opened trade windows for {npc.Name}");
+        }
+
+        public void CloseTradeWindows()
+        {
+            if (npcInventoryWindow != null)
+            {
+                hud.Widgets.Remove(npcInventoryWindow);
+                npcInventoryWindow = null;
+            }
+            
+            // Hide player backpack
+            if (backpackWindow != null)
+            {
+                backpackWindow.Visible = false;
+            }
+            
+            currentTradingNpc = null;
+            
+            Console.WriteLine("Closed trade windows");
+        }
+
+        public bool IsTrading()
+        {
+            return currentTradingNpc != null && npcInventoryWindow != null && npcInventoryWindow.Visible;
         }
 
         public void ShowDialogue(string message, Npc npc)
@@ -189,8 +329,6 @@ namespace Moonlight_Vale.UI
             Console.WriteLine("No DialogBox found");
             return false;
         }
-        
-        
 
         private void HandleUnifiedDragAndDrop(MouseState currentMouseState)
         {
@@ -223,6 +361,22 @@ namespace Moonlight_Vale.UI
                         if (inventoryIndex < player.Inventory.Count && player.Inventory[inventoryIndex] != null)
                         {
                             StartDrag(DragSource.Inventory, inventoryIndex, player.Inventory[inventoryIndex], mousePosition);
+                            return;
+                        }
+                    }
+                }
+                
+                // Check if drag started from NPC inventory (if trading)
+                if (IsTrading())
+                {
+                    int npcInventoryIndex = GetNpcInventorySlotAtMouse(mousePosition);
+                    if (npcInventoryIndex != -1)
+                    {
+                        if (npcInventoryIndex < currentTradingNpc.Inventory.Count && 
+                            currentTradingNpc.Inventory[npcInventoryIndex] != null)
+                        {
+                            StartDrag(DragSource.NpcInventory, npcInventoryIndex, 
+                                     currentTradingNpc.Inventory[npcInventoryIndex], mousePosition);
                             return;
                         }
                     }
@@ -265,6 +419,22 @@ namespace Moonlight_Vale.UI
             for (int i = 0; i < inventorySlots.Count && i < 30; i++)
             {
                 if (inventorySlots[i].HitTest(mousePosition) != null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private int GetNpcInventorySlotAtMouse(Point mousePosition)
+        {
+            if (!IsTrading() || npcInventoryWindow == null || !npcInventoryWindow.Visible) 
+                return -1;
+            
+            var npcInventorySlots = npcInventoryWindow.GetInventorySlots();
+            for (int i = 0; i < npcInventorySlots.Count && i < 30; i++)
+            {
+                if (npcInventorySlots[i].HitTest(mousePosition) != null)
                 {
                     return i;
                 }
@@ -342,6 +512,7 @@ namespace Moonlight_Vale.UI
             // Determine drop target
             int targetActionBarIndex = GetActionBarSlotAtMouse(mousePosition);
             int targetInventoryIndex = GetInventorySlotAtMouse(mousePosition);
+            int targetNpcInventoryIndex = GetNpcInventorySlotAtMouse(mousePosition);
             
             bool dropSuccessful = false;
             
@@ -350,41 +521,69 @@ namespace Moonlight_Vale.UI
                 // Drop on action bar
                 if (dragSource == DragSource.ActionBar && targetActionBarIndex != draggedItemIndex)
                 {
-                    // Action bar to action bar swap
                     overworldScreen.Player.SwapActionBarItems(draggedItemIndex, targetActionBarIndex);
                     dropSuccessful = true;
                     Console.WriteLine($"Swapped action bar items: {draggedItemIndex} <-> {targetActionBarIndex}");
                 }
                 else if (dragSource == DragSource.Inventory)
                 {
-                    // Inventory to action bar
                     overworldScreen.Player.MoveInventoryToActionBar(draggedItemIndex, targetActionBarIndex);
                     dropSuccessful = true;
                     Console.WriteLine($"Moved from inventory[{draggedItemIndex}] to action bar[{targetActionBarIndex}]");
                 }
+                else if (dragSource == DragSource.NpcInventory)
+                {
+                    // Can't move NPC items to action bar directly
+                    Console.WriteLine("Cannot move NPC items to action bar");
+                }
             }
             else if (targetInventoryIndex != -1 && backpackWindow.Visible)
             {
-                // Drop on inventory
+                // Drop on player inventory
                 if (dragSource == DragSource.Inventory && targetInventoryIndex != draggedItemIndex)
                 {
-                    // Inventory to inventory swap
                     overworldScreen.Player.SwapInventoryItems(draggedItemIndex, targetInventoryIndex);
                     dropSuccessful = true;
                     Console.WriteLine($"Swapped inventory items: {draggedItemIndex} <-> {targetInventoryIndex}");
                 }
                 else if (dragSource == DragSource.ActionBar)
                 {
-                    // Action bar to inventory
                     overworldScreen.Player.MoveActionBarToInventory(draggedItemIndex, targetInventoryIndex);
                     dropSuccessful = true;
                     Console.WriteLine($"Moved from action bar[{draggedItemIndex}] to inventory[{targetInventoryIndex}]");
+                }
+                else if (dragSource == DragSource.NpcInventory)
+                {
+                    // TRADING: Buy item from NPC using NPC's method
+                    dropSuccessful = currentTradingNpc.MoveToPlayerInventory(draggedItemIndex, targetInventoryIndex, overworldScreen.Player);
+                }
+            }
+            else if (targetNpcInventoryIndex != -1 && IsTrading())
+            {
+                // Drop on NPC inventory
+                if (dragSource == DragSource.Inventory)
+                {
+                    // TRADING: Sell item to NPC using NPC's method
+                    dropSuccessful = currentTradingNpc.MoveFromPlayerInventory(draggedItemIndex, targetNpcInventoryIndex, overworldScreen.Player);
+                }
+                else if (dragSource == DragSource.ActionBar)
+                {
+                    Console.WriteLine("Cannot sell items directly from action bar. Move to inventory first.");
+                }
+                else if (dragSource == DragSource.NpcInventory && targetNpcInventoryIndex != draggedItemIndex)
+                {
+                    // NPC inventory reorganization - simple swap
+                    var tempItem = currentTradingNpc.Inventory[draggedItemIndex];
+                    currentTradingNpc.Inventory[draggedItemIndex] = currentTradingNpc.Inventory[targetNpcInventoryIndex];
+                    currentTradingNpc.Inventory[targetNpcInventoryIndex] = tempItem;
+                    dropSuccessful = true;
+                    Console.WriteLine($"Reorganized NPC inventory: {draggedItemIndex} <-> {targetNpcInventoryIndex}");
                 }
             }
             
             if (!dropSuccessful)
             {
-                Console.WriteLine("Drag cancelled - no valid drop target");
+                Console.WriteLine("Drag cancelled - no valid drop target or transaction failed");
             }
             
             CleanupDrag();
@@ -410,17 +609,29 @@ namespace Moonlight_Vale.UI
             }
             else if (source == DragSource.Inventory)
             {
-                // Use BackpackWindow's highlight method for inventory slots
                 backpackWindow.HighlightSlot(index, highlight);
                 if (highlight)
                 {
-                    // Also hide the item in the source slot during drag
                     backpackWindow.HideSlotItem(index, true);
                 }
                 else
                 {
-                    // Restore normal display
                     backpackWindow.HideSlotItem(index, false);
+                }
+            }
+            else if (source == DragSource.NpcInventory)
+            {
+                if (npcInventoryWindow != null)
+                {
+                    npcInventoryWindow.HighlightSlot(index, highlight);
+                    if (highlight)
+                    {
+                        npcInventoryWindow.HideSlotItem(index, true);
+                    }
+                    else
+                    {
+                        npcInventoryWindow.HideSlotItem(index, false);
+                    }
                 }
             }
         }
@@ -583,6 +794,32 @@ namespace Moonlight_Vale.UI
                         if (slot.HitTest(mousePosition) != null)
                         {
                             tooltipLabel.Text = (item is Plant) ? $"{item.Name} ({item.Amount})" : $"{item.Name} ({item.Amount})";
+                            tooltipLabel.Width = tooltipLabel.Text.Length * 12;
+                            tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
+                            tooltipLabel.Top = mousePosition.Y - 35;
+                            tooltipLabel.Visible = true;
+                            
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Check if mouse is hovering over NPC inventory slot with an item
+            if (IsTrading() && npcInventoryWindow.Visible)
+            {
+                var npcInventorySlots = npcInventoryWindow.GetInventorySlots();
+                
+                for (int i = 0; i < npcInventorySlots.Count && i < 30; i++)
+                {
+                    var slot = npcInventorySlots[i];
+                    if (i < currentTradingNpc.Inventory.Count && currentTradingNpc.Inventory[i] != null)
+                    {
+                        var item = currentTradingNpc.Inventory[i];
+                        
+                        if (slot.HitTest(mousePosition) != null)
+                        {
+                            tooltipLabel.Text = $"{item.Name} - ${item.Price} ({item.Amount})";
                             tooltipLabel.Width = tooltipLabel.Text.Length * 12;
                             tooltipLabel.Left = (int)(mousePosition.X - (tooltipLabel.Width / 2));
                             tooltipLabel.Top = mousePosition.Y - 35;

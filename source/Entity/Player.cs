@@ -680,38 +680,6 @@ namespace Moonlight_Vale.Entity
             }
             return -1;
         }
-
-        public int FindFirstEmptyActionBarSlot()
-        {
-            for (int i = 0; i < ActionBar.Count; i++)
-            {
-                if (ActionBar[i] == null)
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        public bool TryStackItems(Item sourceItem, Item targetItem)
-        {
-            if (sourceItem == null || targetItem == null)
-                return false;
-
-            if (sourceItem.GetType() == targetItem.GetType() && 
-                sourceItem.Name == targetItem.Name && 
-                targetItem.Amount < targetItem.StackSize)
-            {
-                int spaceAvailable = targetItem.StackSize - targetItem.Amount;
-                int amountToTransfer = Math.Min(sourceItem.Amount, spaceAvailable);
-
-                targetItem.Amount += amountToTransfer;
-                sourceItem.Amount -= amountToTransfer;
-
-                return sourceItem.Amount == 0;
-            }
-
-            return false;
-        }
+        
     }
 }

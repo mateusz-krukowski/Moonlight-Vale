@@ -12,6 +12,8 @@ namespace Moonlight_Vale.Entity
     {
         private const int SPRITE_WIDTH = 16;
         private const int SPRITE_HEIGHT = 24;
+        private const int DEFAULT_INVENTORY_SIZE = 30;
+        
         protected Texture2D spriteSheet;
         protected Texture2D sprite;
         protected ContentManager _contentManager;
@@ -24,7 +26,7 @@ namespace Moonlight_Vale.Entity
         public Vector2 Position { get; set; }
         public float Zoom { get; set; } = 2.0f;
 
-        public List<Item> Inventory { get; set; } = new List<Item>(30);
+        public List<Item> Inventory { get; set; } = new List<Item>(DEFAULT_INVENTORY_SIZE);
         public string Name { get; set; } = "Unnamed NPC";
         public Rectangle InteractionBounds { get; set; } = Rectangle.Empty;
 
@@ -37,6 +39,117 @@ namespace Moonlight_Vale.Entity
 
             // Initialize empty dialogue categories
             InitializeDialogueCategories();
+            
+            // Initialize inventory with proper size and null safety
+            InitializeInventory();
+        }
+
+        /// <summary>
+        /// Initialize inventory with default size and null safety (like Player)
+        /// </summary>
+        private void InitializeInventory()
+        {
+            // Ensure inventory is properly sized with nulls
+            while (Inventory.Count < DEFAULT_INVENTORY_SIZE)
+            {
+                Inventory.Add(null);
+            }
+        }
+
+        /// <summary>
+        /// Ensure inventory has at least the specified size (like Player does)
+        /// </summary>
+        private void EnsureInventorySize(int requiredSize)
+        {
+            while (Inventory.Count <= requiredSize)
+            {
+                Inventory.Add(null);
+            }
+        }
+
+        /// <summary>
+        /// Find first empty inventory slot (like Player)
+        /// </summary>
+        public int FindFirstEmptyInventorySlot()
+        {
+            for (int i = 0; i < DEFAULT_INVENTORY_SIZE; i++)
+            {
+                if (i >= Inventory.Count || Inventory[i] == null)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Add item to inventory with proper null safety and stacking (like Player)
+        /// </summary>
+        public void AddItemToInventory(Item item, int amount = 1)
+        {
+            if (item == null) return;
+            
+            // First try to stack with existing items
+            for (int i = 0; i < Inventory.Count; i++)
+            {
+                var inventoryItem = Inventory[i];
+                if (inventoryItem != null && inventoryItem.Name == item.Name && 
+                    inventoryItem.Amount < inventoryItem.StackSize)
+                {
+                    int spaceAvailable = inventoryItem.StackSize - inventoryItem.Amount;
+                    int amountToAdd = Math.Min(amount, spaceAvailable);
+                    
+                    inventoryItem.Amount += amountToAdd;
+                    amount -= amountToAdd;
+                    
+                    Console.WriteLine($"NPC {Name}: Stacked {amountToAdd}x {item.Name} with inventory slot {i}.");
+                    
+                    if (amount <= 0) return; // All items stacked successfully
+                }
+            }
+
+            // Find first empty slot for remaining items
+            while (amount > 0)
+            {
+                int emptySlot = FindFirstEmptyInventorySlot();
+                if (emptySlot == -1)
+                {
+                    Console.WriteLine($"NPC {Name}: Inventory is full! Cannot add more items.");
+                    return;
+                }
+
+                // Ensure inventory list is large enough (like Player does)
+                EnsureInventorySize(emptySlot);
+
+                // Create new item for this slot
+                var newItem = CreateItemCopy(item);
+                newItem.Amount = Math.Min(amount, item.StackSize);
+                
+                if (_contentManager != null)
+                {
+                    newItem.LoadContent(_contentManager);
+                }
+
+                Inventory[emptySlot] = newItem;
+                amount -= newItem.Amount;
+                
+                Console.WriteLine($"NPC {Name}: Added {newItem.Amount}x {newItem.Name} to inventory slot {emptySlot}.");
+            }
+        }
+
+        /// <summary>
+        /// Swap items within NPC inventory (like Player.SwapInventoryItems)
+        /// </summary>
+        public void SwapInventoryItems(int index1, int index2)
+        {
+            // Ensure both indices are valid and inventory is large enough
+            EnsureInventorySize(Math.Max(index1, index2));
+
+            var temp = Inventory[index1];
+            Inventory[index1] = Inventory[index2];
+            Inventory[index2] = temp;
+
+            Console.WriteLine($"NPC {Name}: Swapped inventory items: [{index1}] <-> [{index2}]");
         }
 
         protected virtual void InitializeDialogueCategories()
@@ -172,8 +285,10 @@ namespace Moonlight_Vale.Entity
 
         public void LoadContent(ContentManager content, string spritePath)
         {
-            _contentManager = content;
+            _contentManager = content; // Store the content manager for later use
             sprite = content.Load<Texture2D>(spritePath);
+            
+            // Load content for all inventory items (with null safety)
             foreach (var item in Inventory)
             {
                 item?.LoadContent(content);
@@ -209,6 +324,265 @@ namespace Moonlight_Vale.Entity
 
             return false;
         }
+
+        /// <summary>
+        /// Move item from NPC inventory to Player inventory (Player buying from NPC)
+        /// Enhanced with Player-like safety mechanisms
+        /// </summary>
+        public bool MoveToPlayerInventory(int npcInventoryIndex, int playerInventoryIndex, Player player)
+        {
+            // Enhanced null safety checks
+            if (player == null)
+            {
+                Console.WriteLine("Player is null!");
+                return false;
+            }
+
+            if (npcInventoryIndex < 0 || npcInventoryIndex >= Inventory.Count)
+            {
+                Console.WriteLine($"Invalid NPC inventory index: {npcInventoryIndex}");
+                return false;
+            }
+
+            var npcItem = Inventory[npcInventoryIndex];
+            if (npcItem == null)
+            {
+                Console.WriteLine("No item at NPC inventory index");
+                return false;
+            }
+            
+            // Check if player has enough gold
+            if (player.Gold < npcItem.Price)
+            {
+                Console.WriteLine($"Player doesn't have enough gold! Need ${npcItem.Price}, has ${player.Gold}");
+                return false;
+            }
+
+            // Ensure player inventory is large enough (like Player does)
+            while (player.Inventory.Count <= playerInventoryIndex)
+            {
+                player.Inventory.Add(null);
+            }
+
+            // Handle existing item at target slot in player inventory
+            var existingPlayerItem = player.Inventory[playerInventoryIndex];
+            
+            // Charge player gold
+            player.Gold -= npcItem.Price;
+            
+            // Create copy of NPC item for player (buy only 1 at a time)
+            var itemCopyForPlayer = CreateItemCopy(npcItem);
+            itemCopyForPlayer.Amount = 1;
+            
+            // Load content for the new item if ContentManager is available
+            if (_contentManager != null)
+            {
+                itemCopyForPlayer.LoadContent(_contentManager);
+            }
+            
+            // Move existing player item to NPC inventory slot (if any)
+            Inventory[npcInventoryIndex] = existingPlayerItem;
+            
+            // Place bought item in player inventory
+            player.Inventory[playerInventoryIndex] = itemCopyForPlayer;
+            
+            // Decrease NPC item amount (with null safety)
+            if (existingPlayerItem == null) // If we didn't get anything in return
+            {
+                npcItem.Amount--;
+                if (npcItem.Amount <= 0)
+                {
+                    Inventory[npcInventoryIndex] = null;
+                }
+            }
+            
+            Console.WriteLine($"Player bought {itemCopyForPlayer.Name} for ${npcItem.Price}");
+            return true;
+        }
+
+        /// <summary>
+        /// Move item from Player inventory to NPC inventory (Player selling to NPC)
+        /// Enhanced with Player-like safety mechanisms
+        /// </summary>
+        public bool MoveFromPlayerInventory(int playerInventoryIndex, int npcInventoryIndex, Player player)
+        {
+            // Enhanced null safety checks
+            if (player == null)
+            {
+                Console.WriteLine("Player is null!");
+                return false;
+            }
+
+            if (playerInventoryIndex < 0 || playerInventoryIndex >= player.Inventory.Count)
+            {
+                Console.WriteLine($"Invalid player inventory index: {playerInventoryIndex}");
+                return false;
+            }
+
+            var playerItem = player.Inventory[playerInventoryIndex];
+            if (playerItem == null)
+            {
+                Console.WriteLine("No item at player inventory index");
+                return false;
+            }
+
+            // Ensure NPC inventory is large enough (like Player does)
+            EnsureInventorySize(npcInventoryIndex);
+
+            var existingNpcItem = Inventory[npcInventoryIndex];
+            
+            // Calculate sell price (NPC buys at 70% of item value)
+            int sellPrice = (int)(playerItem.Price * 0.7f);
+            
+            // Give player gold
+            player.Gold += sellPrice;
+            
+            // Create copy of player item for NPC (sell only 1 at a time)
+            var itemCopyForNpc = CreateItemCopy(playerItem);
+            itemCopyForNpc.Amount = 1;
+            
+            // Load content for the new item if ContentManager is available
+            if (_contentManager != null)
+            {
+                itemCopyForNpc.LoadContent(_contentManager);
+            }
+            
+            // Move existing NPC item to player inventory slot (if any)
+            player.Inventory[playerInventoryIndex] = existingNpcItem;
+            
+            // Place sold item in NPC inventory
+            Inventory[npcInventoryIndex] = itemCopyForNpc;
+            
+            // Decrease player item amount (with null safety)
+            if (existingNpcItem == null) // If we didn't get anything in return
+            {
+                playerItem.Amount--;
+                if (playerItem.Amount <= 0)
+                {
+                    player.Inventory[playerInventoryIndex] = null;
+                }
+            }
+            
+            Console.WriteLine($"Player sold {itemCopyForNpc.Name} for ${sellPrice}");
+            return true;
+        }
+
+        /// <summary>
+        /// Swap items between NPC and Player inventories (direct exchange)
+        /// Enhanced with Player-like safety mechanisms
+        /// </summary>
+        public void SwapWithPlayerInventory(int npcInventoryIndex, int playerInventoryIndex, Player player)
+        {
+            if (player == null)
+            {
+                Console.WriteLine("Player is null!");
+                return;
+            }
+
+            // Ensure both inventories are large enough (like Player does)
+            EnsureInventorySize(npcInventoryIndex);
+            while (player.Inventory.Count <= playerInventoryIndex)
+            {
+                player.Inventory.Add(null);
+            }
+
+            // Simple swap without money exchange
+            var tempItem = Inventory[npcInventoryIndex];
+            Inventory[npcInventoryIndex] = player.Inventory[playerInventoryIndex];
+            player.Inventory[playerInventoryIndex] = tempItem;
+            
+            Console.WriteLine($"Swapped NPC[{npcInventoryIndex}] with Player[{playerInventoryIndex}]");
+        }
+
+        /// <summary>
+        /// Try to stack items like Player.TryStackItems
+        /// </summary>
+        public bool TryStackItems(Item sourceItem, Item targetItem)
+        {
+            if (sourceItem == null || targetItem == null)
+                return false;
+
+            if (sourceItem.GetType() == targetItem.GetType() && 
+                sourceItem.Name == targetItem.Name && 
+                targetItem.Amount < targetItem.StackSize)
+            {
+                int spaceAvailable = targetItem.StackSize - targetItem.Amount;
+                int amountToTransfer = Math.Min(sourceItem.Amount, spaceAvailable);
+
+                targetItem.Amount += amountToTransfer;
+                sourceItem.Amount -= amountToTransfer;
+
+                return sourceItem.Amount == 0;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Helper method to create a copy of an item (with enhanced error handling)
+        /// </summary>
+        private Item CreateItemCopy(Item original)
+        {
+            if (original == null)
+            {
+                throw new ArgumentNullException(nameof(original), "Cannot create copy of null item");
+            }
+
+            try
+            {
+                if (original is Seed seed)
+                {
+                    string plantName = original.Name.Replace(" seed", "");
+                    return Seed.CreateSeed(plantName);
+                }
+                else if (original is Crop crop)
+                {
+                    return Crop.CreateCrop(original.Name);
+                }
+                else if (original is Tool tool)
+                {
+                    return new Tool(tool.Name, tool.Description, tool.IconPath, 
+                                   tool.StackSize, tool.Price, tool.Durability, tool.TypeOfTool);
+                }
+                
+                throw new NotImplementedException($"Cannot create copy of item type: {original.GetType()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating item copy for {original.Name}: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Print inventory contents for debugging (like Player.PrintInventory)
+        /// </summary>
+        public void PrintInventory()
+        {
+            Console.WriteLine($"=== {Name.ToUpper()} INVENTORY ===");
+            Console.WriteLine($"Items: {Inventory.Count(i => i != null)}/{DEFAULT_INVENTORY_SIZE}");
+            Console.WriteLine("------------------------");
+    
+            if (Inventory.Count(i => i != null) == 0)
+            {
+                Console.WriteLine("Inventory is empty!");
+                return;
+            }
+    
+            for (int i = 0; i < Inventory.Count; i++)
+            {
+                var item = Inventory[i];
+                if (item != null)
+                {
+                    Console.WriteLine($"[{i:D2}] {item.Name} x {item.Amount} (${item.Price})");
+                }
+                else
+                {
+                    Console.WriteLine($"[{i:D2}] NULL");
+                }
+            }
+            Console.WriteLine("========================");
+        }
     }
 
 
@@ -236,7 +610,10 @@ namespace Moonlight_Vale.Entity
 
         public void AddTradeItem(Item item)
         {
-            tradeItems.Add(item);
+            if (item != null)
+            {
+                tradeItems.Add(item);
+            }
         }
 
         public void SetBeforeTradeDialogues(List<string> beforeTradeMessages)
@@ -266,12 +643,12 @@ namespace Moonlight_Vale.Entity
 
         public bool HasItem(string itemName)
         {
-            return tradeItems.Any(item => item.Name == itemName);
+            return tradeItems.Any(item => item?.Name == itemName);
         }
 
         public Item GetItem(string itemName)
         {
-            return tradeItems.FirstOrDefault(item => item.Name == itemName);
+            return tradeItems.FirstOrDefault(item => item?.Name == itemName);
         }
     }
 

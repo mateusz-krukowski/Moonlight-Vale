@@ -296,7 +296,7 @@ namespace Moonlight_Vale.UI
                 case "shop":
                     // Handle shop option - end dialogue for now
                     System.Console.WriteLine("Player chose shop option - ending dialogue");
-                    //hudManager.OpenNPCBackpack(npc);
+                    hudManager.OpenTradeWindows(npc);
                     break;
             }
         }
@@ -365,6 +365,16 @@ namespace Moonlight_Vale.UI
         {
             System.Console.WriteLine("HandleKeyboardInput called - delegating to HandleContinueClick");
             HandleContinueClick();
+        }
+        private void OpenTradeWindows()
+        {
+            System.Console.WriteLine("Opening trade windows...");
+    
+            // Open trade windows through HudManager
+            hudManager.OpenTradeWindows(npc);
+    
+            // End dialogue since we're now in trading mode
+            EndDialogue();
         }
     }
 }
