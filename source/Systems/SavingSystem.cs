@@ -50,7 +50,7 @@ namespace Moonlight_Vale.Systems
             }
         }
 
-        public void InitializeNewSave()
+        public void InitializeNewSave() //pass playername from IntroScreen
         {
             try
             {
@@ -59,9 +59,8 @@ namespace Moonlight_Vale.Systems
                 var saveFileName = $"Save_{nextSaveNumber}.save";
                 activeSavePath = Path.Combine(savePath, saveFileName);
 
-                var playerData = new { Name = "Player", Level = 1 };
-                var worldData = new { Day = 1, Weather = "Sunny" };
-                var farmData = new { Crops = 3, Animals = 2 };
+                var playerData = new { Name = "Player", currentMap = "player_farm", Position = new { X = 950, Y = 700 }, Inventory = new List<string>(30), Gold = 100 };
+                var timeData = new { day = 1, hour = 6, minute = 0};
 
                 string tmxMapPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Tilemaps", "player_farm_reduced.tmx");
                 bool tmxExists = File.Exists(tmxMapPath);
@@ -86,19 +85,7 @@ namespace Moonlight_Vale.Systems
                             entryStream.Write(json);
                         }
 
-                        var worldEntry = archive.CreateEntry("world.dat");
-                        using (var entryStream = new StreamWriter(worldEntry.Open()))
-                        {
-                            string json = JsonSerializer.Serialize(worldData, new JsonSerializerOptions { WriteIndented = true });
-                            entryStream.Write(json);
-                        }
-
-                        var farmEntry = archive.CreateEntry("farm.dat");
-                        using (var entryStream = new StreamWriter(farmEntry.Open()))
-                        {
-                            string json = JsonSerializer.Serialize(farmData, new JsonSerializerOptions { WriteIndented = true });
-                            entryStream.Write(json);
-                        }
+                        var timeEntry = archive.CreateEntry("time.dat");
 
                         if (tmxExists)
                         {
@@ -288,6 +275,21 @@ namespace Moonlight_Vale.Systems
             {
                 Console.WriteLine($"Failed to modify tile in saved map: {ex.Message}");
             }
+        }
+
+        public void SaveDataAboutPlayer()
+        {
+            //name
+            //current map
+            //position
+            //inventory
+            //gold
+            
+        }
+
+        public void SaveTimeData(TimeSystem timeSystem)
+        {
+            
         }
         
         public void LoadSave(string saveFilePath)
