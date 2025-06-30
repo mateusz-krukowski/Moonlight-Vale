@@ -47,8 +47,5 @@
   <ItemGroup>
     <MonoGameContentReference Include="source\Content\Content.mgcb" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="source\Utils\" />
-  </ItemGroup>
 
 </Project>
